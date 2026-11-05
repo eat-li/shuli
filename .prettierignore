@@ -3,3 +3,8 @@ dist
 pnpm-lock.yaml
 client/dist
 server/migrations
+
+# README 里的截图用 <img width="860"> 控制显示宽度、徽章用链接包图片。
+# Prettier 会把它们压成普通 Markdown，并给每行补两个空格，
+# 结果是首图撑满整屏、徽章丢掉跳转。这份文档手工排版，不进格式化流程。
+README.md

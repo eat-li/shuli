@@ -6,6 +6,9 @@ dist/
 .pnpm-store/
 .vscode/
 
+# Vite 在配置文件变化时生成的临时副本，属于构建中间产物
+*.timestamp-*.mjs
+
 # 运行时数据：SQLite 库、本地上传、自动生成的密钥（绝不入库）
 server/data/
 

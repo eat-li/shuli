@@ -1,0 +1,89 @@
+name: Release
+
+# 打 tag 时自动构建便携包并挂到 Release 上。
+# 也可以手动跑（workflow_dispatch）：此时只产出构建物，不创建 Release，
+# 用来验证打包流程是否正常。
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  package:
+    # 便携包内含 win32 的 node.exe 与 sqlite3 原生模块，只能在 Windows 上打
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.3.0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build front-end
+        run: pnpm build
+
+      # 这一步会在 release/server 里用 npm 装生产依赖（含 sqlite3 预编译二进制），
+      # 再复制当前 node 运行时进去。产物目录结构见 scripts/pack-release.mjs。
+      - name: Pack portable bundle
+        run: node scripts/pack-release.mjs
+
+      - name: Zip and checksum
+        shell: pwsh
+        run: |
+          $ver = if ("${{ github.ref_type }}" -eq "tag") {
+            "${{ github.ref_name }}".TrimStart('v')
+          } else {
+            (Get-Content package.json -Raw | ConvertFrom-Json).version
+          }
+          $zip = "shuli-$ver-win64.zip"
+          New-Item -ItemType Directory -Force -Path dist | Out-Null
+
+          # 7z 在 windows runner 上自带，比 Compress-Archive 快一个量级；
+          # 万一镜像变了没有 7z，退回 PowerShell 原生实现，不让发版卡住。
+          if (Get-Command 7z -ErrorAction SilentlyContinue) {
+            7z a -tzip "dist\$zip" ".\release\*" | Out-Null
+          } else {
+            Compress-Archive -Path ".\release\*" -DestinationPath "dist\$zip" -CompressionLevel Optimal
+          }
+
+          $size = [math]::Round((Get-Item "dist\$zip").Length / 1MB, 1)
+          Write-Host "打包完成：$zip，$size MB"
+
+          $hash = (Get-FileHash "dist\$zip" -Algorithm SHA256).Hash.ToLower()
+          "$hash  $zip" | Out-File -Encoding ascii "dist\$zip.sha256"
+          Write-Host "SHA256：$hash"
+
+          "ZIP_NAME=$zip" >> $env:GITHUB_ENV
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.ZIP_NAME }}
+          path: |
+            dist/${{ env.ZIP_NAME }}
+            dist/${{ env.ZIP_NAME }}.sha256
+
+      # 只有 tag 触发才发布；手动运行时只留构建物供检查
+      - name: Publish release
+        if: github.ref_type == 'tag'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/${{ env.ZIP_NAME }}
+            dist/${{ env.ZIP_NAME }}.sha256
+          # 提交历史本身就是更新说明的来源；首个版本另有人工撰写的中文说明
+          generate_release_notes: true
