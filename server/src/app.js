@@ -122,6 +122,25 @@ app.use(express.json({ limit: '2mb' }))
 // 健康检查
 app.get('/api/health', (req, res) => res.json({ code: 0, message: 'ok', data: { status: 'up' } }))
 
+// 本地存储驱动：把上传目录挂成静态资源。
+// key 里带 UUID（永不覆盖），可以放心长缓存；index:false 防止目录被列出来。
+const storage = require('./storage')
+if (storage.driver === 'local' && storage.staticDir) {
+  fs.mkdirSync(storage.staticDir, { recursive: true })
+  app.use(
+    storage.staticPrefix,
+    express.static(storage.staticDir, {
+      index: false,
+      maxAge: '1y',
+      immutable: true,
+      dotfiles: 'deny'
+    })
+  )
+  console.log('🖼️  图片存储：本地磁盘', storage.staticDir)
+} else {
+  console.log('🖼️  图片存储：', storage.driver)
+}
+
 // 业务路由
 app.use('/api', routes)
 

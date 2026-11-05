@@ -3,7 +3,7 @@ const crypto = require('crypto')
 const archiver = require('archiver')
 const { Op } = require('sequelize')
 const { Resource, ResourceCategory } = require('../models')
-const { client, BASE_URL } = require('../config/oss')
+const storage = require('../storage')
 const { ok, fail } = require('../utils/response')
 
 const MAX_PAGE_SIZE = 100
@@ -177,16 +177,15 @@ exports.batchDownload = async (req, res, next) => {
     for (const row of rows) {
       if (!row.key) continue
       try {
-        // ali-oss 的 getStream 解析为 { stream, res }，不是裸 Readable
-        const { stream } = await client.getStream(row.key)
+        const { stream } = await storage.getStream(row.key)
         stream.on('error', (e) => {
-          console.warn('[resource] 读取 OSS 失败:', row.key, e?.message || e)
+          console.warn('[resource] 读取文件失败:', row.key, e?.message || e)
           archive.destroy(e)
         })
         archive.append(stream, { name: zipEntryName(row.originalName || row.title, used) })
       } catch (e) {
         // 单个文件读不到不拖垮整包
-        console.warn('[resource] 读取 OSS 失败:', row.key, e?.message || e)
+        console.warn('[resource] 读取文件失败:', row.key, e?.message || e)
       }
     }
     await archive.finalize()
@@ -233,7 +232,7 @@ exports.upload = async (req, res, next) => {
     if (!type.inline) {
       headers['Content-Disposition'] = `attachment; filename*=UTF-8''${rfc5987(originalName)}`
     }
-    await client.put(key, req.file.buffer, { mime: type.mime, headers })
+    await storage.put(key, req.file.buffer, { mime: type.mime, headers })
 
     const row = await Resource.create({
       title: trim(req.body?.title, 200) || originalName,
@@ -241,7 +240,7 @@ exports.upload = async (req, res, next) => {
       ext,
       mime: type.mime,
       size: req.file.size || req.file.buffer.length,
-      url: `${BASE_URL}/${key}`,
+      url: storage.urlFor(key),
       key,
       categoryId: category.skip ? null : category.categoryId,
       remark: trim(req.body?.remark, 500) || null
@@ -291,10 +290,10 @@ exports.remove = async (req, res, next) => {
     await row.destroy()
     if (key) {
       try {
-        await client.delete(key)
+        await storage.delete(key)
       } catch (e) {
         // 对象没删掉只是占一点存储，不该让用户看到「删除失败」却已经没有记录
-        console.warn('[resource] OSS 删除失败:', e?.message || e)
+        console.warn('[resource] 删除文件失败:', e?.message || e)
       }
     }
     ok(res, null, '已删除')

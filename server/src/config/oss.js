@@ -4,7 +4,8 @@
 // 后果是「没配 OSS 的人连服务都起不来」——题库、成绩这些根本不上传文件的页面也用不了。
 // 现在改成首次使用时才建客户端，并把错误换成一句能照着做的提示。
 //
-// 注：本地磁盘存储与「本地/远端切换」正在开发中，届时这里会被存储抽象层取代。
+// 注：本文件只被 storage/oss.js 使用。默认驱动是本地磁盘（storage/local.js），
+// 只有 STORAGE_DRIVER=oss 时才会走到这里。
 const OSS = require('ali-oss')
 require('dotenv').config()
 
@@ -15,8 +16,7 @@ const BASE_URL =
 
 const MISSING_CONFIG_HINT =
   '未配置对象存储：请在 server/.env 填写 OSS_ACCESS_KEY_ID / OSS_ACCESS_KEY_SECRET / ' +
-  'OSS_BUCKET / OSS_REGION。当前版本的上传功能依赖阿里云 OSS，' +
-  '本地磁盘存储正在开发中（见 README 的项目状态）。'
+  'OSS_BUCKET / OSS_REGION；或者把 STORAGE_DRIVER 改回 local 用本地磁盘存储。'
 
 let instance = null
 

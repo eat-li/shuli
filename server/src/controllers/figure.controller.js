@@ -1,7 +1,7 @@
-// 图形库控制器：只管理图片元数据（文件本体内体走 POST /upload 存 OSS）
+// 图形库控制器：只管理图片元数据（文件本体走 POST /upload，交给存储层落盘）
 const { Op } = require('sequelize')
 const { Figure, Question, Conclusion } = require('../models')
-const { client } = require('../config/oss')
+const storage = require('../storage')
 const { ok, fail } = require('../utils/response')
 
 const MAX_PAGE_SIZE = 100
@@ -124,19 +124,25 @@ exports.remove = async (req, res, next) => {
     let ossError = ''
     if (withFile && row.key) {
       try {
-        await client.delete(row.key)
-        ossDeleted = true
+        // 文件可能属于另一种存储（例如老数据在 OSS、当前驱动是本地）：
+        // 归属不符时不动文件，只删记录，并如实回报给调用方。
+        if (!storage.ownsUrl(row.url)) {
+          ossSkipped = true
+        } else {
+          const { deleted } = await storage.delete(row.key)
+          ossDeleted = deleted
+        }
       } catch (e) {
-        // OSS 删除失败不阻塞记录删除（key 可能早已不存在、或网络抖动），但要如实回报
+        // 删除失败不阻塞记录删除（文件可能早已不存在、或网络抖动），但要如实回报
         ossError = e?.message || String(e)
-        console.warn(`[figure] OSS 删除失败 ${row.key}: ${ossError}`)
+        console.warn(`[figure] 删除文件失败 ${row.key}: ${ossError}`)
       }
     } else if (withFile) {
       ossSkipped = true // 历史记录没有 key，只能删记录
     }
 
     await row.destroy()
-    const message = ossDeleted ? '已删除图片及其 OSS 文件' : '已从图形库移除'
+    const message = ossDeleted ? '已删除图片及其文件' : '已从图形库移除'
     ok(res, { ossDeleted, ossSkipped, ossError, refs, withFile }, message)
   } catch (e) {
     next(e)
