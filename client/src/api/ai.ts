@@ -1,4 +1,4 @@
-import request, { TOKEN_KEY } from './request'
+import request from './request'
 import { i18n } from '../i18n'
 import type {
   AiConfig,
@@ -49,13 +49,10 @@ export const generateConclusionStream = async (
   handlers: ConclusionStreamHandlers = {},
   signal?: AbortSignal
 ): Promise<{ text: string; truncated: boolean; interrupted: boolean }> => {
-  const token = localStorage.getItem(TOKEN_KEY)
+  // 单用户版本没有鉴权：SSE 走 fetch 也不会带令牌，只带内容类型。
   const res = await fetch('/api/ai/conclusion/stream', {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {})
-    },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
     signal
   })
