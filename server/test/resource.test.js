@@ -1,32 +1,37 @@
 // 资料库接口测试：分类整理、上传校验、列表筛选、删除。
 //
-// OSS 用内存桩替换：测试绝不能往真实桶里写文件。桩必须在 createApiContext()
-// 加载 app 之前塞进 require 缓存（控制器在模块加载时就解构了 client）。
+// 存储用内存桩替换：测试绝不能往真实磁盘/对象存储里写文件。
+// 桩打在**抽象层**（src/storage）而不是某个具体驱动上——控制器只依赖
+// put/delete/getStream/urlFor/ownsUrl 这组接口，桩住抽象层才能同时覆盖
+// 「本地」与「OSS」两种实现，测试也不再随默认驱动切换而变红。
+// 必须在 createApiContext() 加载 app 之前塞进 require 缓存（控制器在加载时已 require 它）。
 const test = require('node:test')
 const assert = require('node:assert/strict')
 const { Readable } = require('node:stream')
 
-const ossPath = require.resolve('../src/config/oss')
+const storagePath = require.resolve('../src/storage')
 const puts = []
 const deleted = []
-require.cache[ossPath] = {
-  id: ossPath,
-  filename: ossPath,
+const STUB_BASE = 'https://oss.test'
+require.cache[storagePath] = {
+  id: storagePath,
+  filename: storagePath,
   loaded: true,
   exports: {
-    BASE_URL: 'https://oss.test',
-    client: {
-      put: async (key, buffer, opts) => {
-        puts.push({ key, size: buffer.length, opts })
-        return { name: key }
-      },
-      delete: async (key) => {
-        deleted.push(key)
-        return {}
-      },
-      // 批量下载从 OSS 读流；内容带 key 前缀，便于断言 zip 里装的是哪个对象
-      getStream: async (key) => ({ stream: Readable.from([Buffer.from('BODY:' + key)]) })
-    }
+    driver: 'oss',
+    put: async (key, buffer, opts) => {
+      puts.push({ key, size: buffer.length, opts })
+      return { key, url: `${STUB_BASE}/${key}` }
+    },
+    delete: async (key) => {
+      deleted.push(key)
+      return { deleted: true }
+    },
+    // 批量下载从存储读流；内容带 key 前缀，便于断言 zip 里装的是哪个对象
+    getStream: async (key) => ({ stream: Readable.from([Buffer.from('BODY:' + key)]) }),
+    urlFor: (key) => `${STUB_BASE}/${key}`,
+    thumbUrl: (key) => `${STUB_BASE}/${key}`,
+    ownsUrl: (url) => String(url || '').startsWith(`${STUB_BASE}/`)
   }
 }
 

@@ -40,23 +40,8 @@ withDb('健康检查无需鉴权', async () => {
   assert.equal(res.body.code, 0)
 })
 
-withDb('未带令牌访问业务接口返回 401', async () => {
-  const res = await ctx.request('GET', '/api/questions')
-  assert.equal(res.status, 401)
-  assert.equal(res.body.code, 40100)
-})
-
-withDb('错误密码不签发令牌', async () => {
-  const res = await ctx.request('POST', '/api/auth/login', {
-    body: { username: 'admin', password: 'definitely-wrong' }
-  })
-  assert.notEqual(res.body.code, 0)
-  assert.equal(res.body.data, null)
-})
-
-withDb('管理员登录取到令牌', () => {
-  assert.ok(token, '登录后应拿到 token')
-})
+// 本版本没有鉴权：不存在「未带令牌 401」「密码错误」「登录拿令牌」这三种情形，
+// 对应用例随登录体系一并删除。
 
 withDb('建多选题：子类型落库，且只被「多选」筛选中', async () => {
   const created = await ctx.request('POST', '/api/questions', {

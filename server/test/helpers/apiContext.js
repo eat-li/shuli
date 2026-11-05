@@ -49,10 +49,23 @@ function testDbName() {
 // —— 2026-10-27 真实发生过：新增的 guest 测试在文件顶部 import 了 service，
 //    models 先被加载到 math_system，全套测试把生产库反复 DROP/重建。
 // 所以在模块加载时就把 DB_NAME 指向测试库，让后续任何 import 都落在测试库上。
-const DB_NAME = testDbName()
-process.env.DB_NAME = DB_NAME
+// 没有 .env 时（CI、临时 clone）DB_NAME 为空，这里**不能抛错**：
+// 抛在模块加载期，node --test 会直接把整个文件判为失败，连「没有数据库 → 整篇跳过」
+// 的机会都没有——跳过判据在测试文件里，靠 createApiContext() 抛错来触发。
+// 所以容错到空值，真正的判断留给 createApiContext()。
+let DB_NAME = ''
+try {
+  DB_NAME = testDbName()
+} catch {
+  DB_NAME = ''
+}
+// 只有拿到测试库名才覆写 env：配置缺失时保持原样，
+// 免得把「未配置」伪装成一个看起来能用的库名。
+if (DB_NAME) process.env.DB_NAME = DB_NAME
 
 async function createApiContext() {
+  // 缺数据库配置是正常情形（CI 没有 MySQL），用一句说明原因的错误让调用方跳过
+  if (!DB_NAME) throw new Error('未配置数据库（缺少 DB_NAME），跳过接口测试')
   const dbName = DB_NAME
 
   let conn
