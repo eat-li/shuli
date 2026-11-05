@@ -81,13 +81,50 @@ function scrubStyleValues(html: string): string {
   return template.innerHTML
 }
 
+// 白名单里的标签名（带闭合 `/` 与自闭合判断）。判定「这个 < 到底是标签还是小于号」。
+// 判定只看「像不像标签」，不看白名单：<script> 也必须保持是标签，
+// 否则会被转义成可见文本，消毒器认不出来，页面上还会留下 "<script>" 字样。
+const KNOWN_TAG_START_RE = /^(?:\/?[a-zA-Z][a-zA-Z0-9:-]*[\s/>]|!)/
+
+/**
+ * 把「不像标签开头」的 `<` 转义成 `&lt;`。
+ *
+ * 数学公式里的 `<` 是不转义的裸字符，直接交给 DOM 解析会被当成标签开头：
+ * `$...(0<r<3)$，点 $P$…` 会变成「伪造标签 + 一串属性」，渲染只剩前半句，
+ * 而且看不出是哪一步丢的。HTTP 层面没有任何报错，只有肉眼能发现。
+ */
+export function escapeStrayLt(html: string): string {
+  if (!html) return html || ''
+  let out = ''
+  let cursor = 0
+  for (;;) {
+    const idx = html.indexOf('<', cursor)
+    if (idx < 0) {
+      out += html.slice(cursor)
+      break
+    }
+    out += html.slice(cursor, idx)
+    // 标签名最长十几个字符，24 个足够做前缀判断
+    const ahead = html.slice(idx + 1, idx + 25)
+    out += KNOWN_TAG_START_RE.test(ahead) ? '<' : '&lt;'
+    cursor = idx + 1
+  }
+  return out
+}
+
 // 富文本消毒唯一出口：按白名单过滤标签与属性，并禁用 script/style/iframe/form 等整类标签。
 // allowStyle=false 用于「只读站、导出」这类不需要行内样式的场景，能进一步收窄攻击面。
 export function sanitizeHtml(html: string, options: SanitizeHtmlOptions = {}): string {
   if (!html || typeof window === 'undefined') return html || ''
 
+  // 解析前先把「不像标签」的裸 < 转义掉。数学公式里的小于号是不转义的，
+  // 而浏览器会把它当成标签开头，一路吞到下一个 >——`(0<r<3)` 足以让整句后半段消失。
+  // 服务端 utils/aiHtml.js 的 escapeStrayLt 是同一套规则（那边管落库，这里管渲染，
+  // 兼顾修复改造前已经存进库里的脏数据）。
+  const escaped = escapeStrayLt(html)
+
   const allowStyle = options.allowStyle !== false
-  const clean = DOMPurify.sanitize(html, {
+  const clean = DOMPurify.sanitize(escaped, {
     ALLOWED_TAGS,
     ALLOWED_ATTR: allowStyle ? ALLOWED_ATTR : ALLOWED_ATTR.filter((attr) => attr !== 'style'),
     ALLOW_DATA_ATTR: false,

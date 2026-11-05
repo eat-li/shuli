@@ -8,6 +8,7 @@ const assert = require('node:assert/strict')
 const {
   plainText,
   cleanAiHtml,
+  escapeStrayLt,
   balanceTags,
   stripUnrequestedAnswer
 } = require('../src/utils/aiHtml')
@@ -62,4 +63,33 @@ test('stripUnrequestedAnswer：整份输出都是答案时返回空串（由调�
 test('stripUnrequestedAnswer：正常输出原样保留（不误伤）', () => {
   const html = '<p>已知 $a>0$，求 $\\dfrac{1}{a}$ 的最小值。</p>'
   assert.equal(stripUnrequestedAnswer('已知 a>0，求 1/a 的最小值。', html, 'stem'), html)
+})
+
+// 数学公式里的小于号是不转义的裸 <。浏览器会把它当成标签开头，
+// 一路吞到下一个 >，整句后半段连同上百字一起消失——接口 200、日志无异常，
+// 只有肉眼看预览才发现「怎么只剩半句」。
+test('cleanAiHtml：公式里未转义的小于号被转义，避免渲染时吞掉后文', () => {
+  const html = '<p>圆 $(x-2)^{2}+y^{2}=r^{2}(0<r<3)$，点 $P(-3,4)$，求斜率之积</p>'
+  assert.equal(
+    cleanAiHtml(html),
+    '<p>圆 $(x-2)^{2}+y^{2}=r^{2}(0&lt;r&lt;3)$，点 $P(-3,4)$，求斜率之积</p>'
+  )
+})
+
+test('cleanAiHtml：正文里的小于号同样转义，真实标签不受影响', () => {
+  assert.equal(
+    cleanAiHtml('<p>当 0<r<3 时<strong>成立</strong></p>'),
+    '<p>当 0&lt;r&lt;3 时<strong>成立</strong></p>'
+  )
+  // 已经是实体（&lt;）的不重复转义，否则页面上会出现字面的 &amp;lt;
+  assert.equal(cleanAiHtml('<p>已知 x &lt; 3 且 y &gt; 1</p>'), '<p>已知 x &lt; 3 且 y &gt; 1</p>')
+  // 白名单内的标签结构原样保留
+  const tags = '<p><em>a</em><br /><img src="/a.png" /><table><tr><td>1</td></tr></table></p>'
+  assert.equal(cleanAiHtml(tags), tags)
+})
+
+test('escapeStrayLt：紧跟单个字母的 < 一律按小于号处理', () => {
+  // $a<s$ 里的 <s 看着像 <s>（删除线），但后面跟的是 $ 不是空白/斜杠/右尖括号，因此是公式
+  assert.equal(escapeStrayLt('$a<s$'), '$a&lt;s$')
+  assert.equal(escapeStrayLt('<s>删掉</s>'), '<s>删掉</s>')
 })

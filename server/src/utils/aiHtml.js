@@ -17,6 +17,42 @@ function plainText(html) {
     .trim()
 }
 
+/**
+ * 把「不像标签开头」的 `<` 转义成 `&lt;`。
+ *
+ * 为什么必须有：数学公式里的小于号是不转义的裸 `<`，一旦这段 HTML 被塞进 DOM，
+ * 浏览器会把它当成标签开头，从那里一路吞到下一个 `>`——实测
+ * `$Cx^{2}+(y-1)^{2}=r^{2}(0<r<3)$，点 $P(-3,4)$…` 渲染出来只剩半句 `…(0`，
+ * 后面的内容全变成那个伪造标签的属性，再被消毒器连同标签一起丢掉。
+ * 这类内容一旦落库，导出的 PDF、作业预览、只读站都会缺半句，而且看不出来是哪里丢的。
+ *
+ * 判定方式：`<` 后面必须紧跟一个白名单里的标签名（且后面是空格、`/` 或 `>`）才算标签。
+ * 用白名单而不是「排除数学环境」——公式外面的正文同样可能出现 `0<r<3`。
+ */
+// 判定只看「像不像标签」，不看白名单：<script> 也必须保持是标签，
+// 否则会被转义成可见文本，消毒器认不出来，页面上还会留下 "<script>" 字样。
+const KNOWN_TAG_START_RE = /^(?:\/?[a-zA-Z][a-zA-Z0-9:-]*[\s/>]|!)/
+
+function escapeStrayLt(html) {
+  if (!html) return html || ''
+  const src = String(html)
+  let out = ''
+  let cursor = 0
+  for (;;) {
+    const idx = src.indexOf('<', cursor)
+    if (idx < 0) {
+      out += src.slice(cursor)
+      break
+    }
+    out += src.slice(cursor, idx)
+    // 取后面一小段做前缀判断：标签名最长十几个字符，24 个足够覆盖
+    const ahead = src.slice(idx + 1, idx + 25)
+    out += KNOWN_TAG_START_RE.test(ahead) ? '<' : '&lt;'
+    cursor = idx + 1
+  }
+  return out
+}
+
 /** 清洗 AI 返回的 HTML：去代码块与文档壳、归一化公式定界符、压缩空白 */
 function cleanAiHtml(html) {
   let out = String(html || '')
@@ -31,6 +67,9 @@ function cleanAiHtml(html) {
   out = out.replace(/\\\(([\s\S]*?)\\\)/g, (_, inner) => `$${inner.trim()}$`)
   // 压缩多余空行
   out = out.replace(/\n{3,}/g, '\n\n').trim()
+  // 必须在最后做：公式定界符归一化之后，正文里的裸 `<` 已全部就位，
+  // 此时再统一转义，不会把刚生成的标签误伤。
+  out = escapeStrayLt(out)
   return out
 }
 
@@ -112,6 +151,7 @@ function stripUnrequestedAnswer(sourceText, html, field) {
 module.exports = {
   plainText,
   cleanAiHtml,
+  escapeStrayLt,
   balanceTags,
   stripUnrequestedAnswer,
   ANSWER_HINT_RE,
