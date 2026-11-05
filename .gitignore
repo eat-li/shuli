@@ -21,3 +21,7 @@ design-preview/
 skills-lock.json
 .impeccable.md
 .dsh-progress/
+
+# 内部 agent 工作流文档（不对外发布）
+AGENTS.md
+GLOSSARY.md
