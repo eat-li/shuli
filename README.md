@@ -56,8 +56,11 @@ pnpm start
 出便携包（生成 `release/`，内置 node.exe 与生产依赖，可直接发给别人）：
 
 ```bash
-pnpm pack
+pnpm pack:release
 ```
+
+> 不要用 `pnpm pack`——那是 pnpm 自带命令，会把这个仓库打成一个 npm 安装包（`shuli-*.tgz`），
+> 不是给老师用的便携包。
 
 > `*.bat` 一律只写 ASCII。cmd 解析批处理用的是它启动那一刻的控制台代码页，
 > 脚本里再 `chcp` 也救不回来——夹带中文会把换行吃掉，整份脚本从那里开始报错。
@@ -125,7 +128,7 @@ v0.1 及更早的版本用 MySQL。v1.0 换成 SQLite 后**不支持原地升级
 | `pnpm dev` | 同时启动前后端（前端 5173，代理 `/api` 到 7788） |
 | `pnpm build` | 构建前端到 `client/dist` |
 | `pnpm start` | 只跑后端，同时托管 `client/dist`（日常使用） |
-| `pnpm pack` | 生成便携包 `release/` |
+| `pnpm pack:release` | 生成便携包 `release/` |
 | `pnpm lint` | ESLint 检查 |
 | `pnpm test` | 服务端测试（每个用例开自己的临时 SQLite 库，不需要任何外部服务） |
 | `pnpm --filter ./client i18n:check` | 校验中英文案键树一致 |

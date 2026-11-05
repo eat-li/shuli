@@ -12,7 +12,8 @@
 // 打包器需要在运行时把二进制解到临时目录再加载，路径与杀软拦截都会出问题。
 // 「一个 node.exe + 一个目录」的用户体验差别很小，维护成本低一个量级。
 //
-// 用法：node scripts/pack-release.mjs
+// 用法：pnpm pack:release
+//   （不要写 `pnpm pack`：那是 pnpm 内置命令，会把仓库打成 npm 安装包，与本脚本无关）
 //   --skip-install   复用上次的 server/node_modules（离线重打时用）
 import { spawnSync } from 'node:child_process'
 import fs from 'node:fs'
@@ -66,11 +67,25 @@ if (!fs.existsSync(distIndex)) {
 }
 
 // 2) 清空旧产物
+//    --skip-install 时要保住 server/node_modules（那正是要复用的东西），
+//    所以只清其余内容；否则整体删掉重来。
 if (fs.existsSync(RELEASE)) {
-  log('清理旧的 release/')
-  fs.rmSync(RELEASE, { recursive: true, force: true })
+  if (skipInstall && fs.existsSync(path.join(RELEASE, 'server', 'node_modules'))) {
+    log('清理旧的 release/（保留依赖，--skip-install）')
+    for (const entry of fs.readdirSync(RELEASE)) {
+      if (entry === 'server') continue
+      fs.rmSync(path.join(RELEASE, entry), { recursive: true, force: true })
+    }
+    for (const entry of fs.readdirSync(path.join(RELEASE, 'server'))) {
+      if (entry === 'node_modules') continue
+      fs.rmSync(path.join(RELEASE, 'server', entry), { recursive: true, force: true })
+    }
+  } else {
+    log('清理旧的 release/')
+    fs.rmSync(RELEASE, { recursive: true, force: true })
+  }
 }
-fs.mkdirSync(RELEASE, { recursive: true })
+fs.mkdirSync(path.join(RELEASE, 'server'), { recursive: true })
 
 // 3) 前端产物
 log('复制前端产物')

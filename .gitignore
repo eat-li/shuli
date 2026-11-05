@@ -28,3 +28,6 @@ skills-lock.json
 # 内部 agent 工作流文档（不对外发布）
 AGENTS.md
 GLOSSARY.md
+
+# npm/pnpm 误打出的安装包（真正的便携包走 pnpm pack:release，产物在 release/）
+*.tgz
