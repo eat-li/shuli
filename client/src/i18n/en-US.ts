@@ -755,8 +755,8 @@ export default {
     restoreConfirmTitle: 'Confirm restore',
     restoreConfirmBtn: 'Restore',
     restoreDone: 'Restore complete: {total} records written',
-    restoreDoneSkipped:
-      'Restore complete: {total} records written; {skipped} related records were skipped because their references no longer exist',
+    restoreDonePartial:
+      'Restore complete: {total} records written; {skipped} related records skipped, {relaxed} records moved to "uncategorized" because their category was not in the backup',
     restoreFailed: 'Restore failed: {msg}',
     badFile: 'the backup file is invalid',
     studentsTitle: 'Student info',

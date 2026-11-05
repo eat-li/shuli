@@ -215,9 +215,17 @@ const onRestoreFile = async (e: Event) => {
   try {
     const res = await restoreBackup(file)
     const total = Object.values(res.counts || {}).reduce((a, b) => a + b, 0)
-    if (res.skippedTotal) {
-      // 备份包里有指向已删数据的孤儿关联，后端已跳过；提醒老师去看一眼是哪些
-      ElMessage.warning(t('dataBackup.restoreDoneSkipped', { total, skipped: res.skippedTotal }))
+    if (res.skippedTotal || res.relaxedTotal) {
+      // 两种情况对老师意味着不同的事，都要说清楚：
+      //   skipped —— 关联记录没恢复（引用的作业/学生/题目不在了）
+      //   relaxed —— 记录恢复了，只是所属分类找不到，归到了「未分类」
+      ElMessage.warning(
+        t('dataBackup.restoreDonePartial', {
+          total,
+          skipped: res.skippedTotal || 0,
+          relaxed: res.relaxedTotal || 0
+        })
+      )
     } else {
       ElMessage.success(t('dataBackup.restoreDone', { total }))
     }

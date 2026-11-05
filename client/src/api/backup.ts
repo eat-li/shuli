@@ -10,8 +10,12 @@ export interface RestoreSkippedRow {
 
 export interface RestoreResult {
   counts: Record<string, number>
+  /** 整条被丢弃的孤儿记录：引用的父数据不存在，且该外键不允许为空 */
   skipped: Record<string, RestoreSkippedRow[]>
   skippedTotal: number
+  /** 只断开引用的记录：父数据不存在但该列可为空（如作业所属分类），整行保留 */
+  relaxed: Record<string, RestoreSkippedRow[]>
+  relaxedTotal: number
 }
 
 // 整包恢复：上传备份 ZIP，后端按依赖顺序恢复全部数据

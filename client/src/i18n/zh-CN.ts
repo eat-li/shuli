@@ -744,8 +744,8 @@ export default {
     restoreConfirmTitle: '恢复备份确认',
     restoreConfirmBtn: '确认恢复',
     restoreDone: '恢复完成：{total} 条数据已写入',
-    restoreDoneSkipped:
-      '恢复完成：{total} 条数据已写入，另有 {skipped} 条关联记录因引用的数据已不存在被跳过',
+    restoreDonePartial:
+      '恢复完成：{total} 条数据已写入；{skipped} 条关联记录被跳过，{relaxed} 条因分类缺失归为「未分类」',
     restoreFailed: '恢复失败：{msg}',
     badFile: '备份文件格式有误',
     studentsTitle: '学生信息',

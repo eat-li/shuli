@@ -158,3 +158,82 @@ withDb('恢复：老备份缺少新增表（可选）仍可导入', async () => 
   assert.equal(res.body.code, 0, 'optional 表缺失不该被当成损坏包')
   assert.match(res.body.message, /恢复完成/)
 })
+
+const mkCategory = async (name) => {
+  const res = await ctx.request('POST', '/api/homework-categories', { token, body: { name } })
+  assert.equal(res.body.code, 0, res.body.message)
+  return res.body.data
+}
+
+const mkHomework = async (title, categoryId) => {
+  const res = await ctx.request('POST', '/api/homeworks', { token, body: { title, categoryId } })
+  assert.equal(res.body.code, 0, res.body.message)
+  return res.body.data
+}
+
+// 作业表的 category_id 是指向作业分类表的外键。这一条曾经在 MODEL_LIST 里整张表缺失，
+// 结果是：导出不含分类 → 恢复时作业带着指向不存在分类的 id 入库 → 外键约束直接让整包 500。
+withDb('导出：作业分类在主键被引用时也进备份包', async () => {
+  const cat = await mkCategory('备份分类A')
+  const hw = await mkHomework('分类往返作业', cat.id)
+
+  const got = await ctx.requestBinary('/api/backup', { token })
+  const zip = await JSZip.loadAsync(got.buffer)
+  assert.ok(zip.file('homework_categories.json'), '分类表必须进包，否则恢复时作业的外键无处可指')
+
+  const cats = JSON.parse(await zip.file('homework_categories.json').async('string'))
+  assert.ok(
+    cats.some((c) => c.id === cat.id && c.name === '备份分类A'),
+    '分类记录应按原主键导出'
+  )
+  const hws = JSON.parse(await zip.file('homeworks.json').async('string'))
+  assert.ok(hws.some((h) => h.id === hw.id && h.categoryId === cat.id))
+})
+
+withDb('恢复：分类在包内时，作业按原分类恢复', async () => {
+  const cat = await mkCategory('往返分类B')
+  const hw = await mkHomework('恢复后仍有分类的作业', cat.id)
+  const backup = await ctx.requestBinary('/api/backup', { token })
+
+  // 删掉分类（作业会被数据库置空 category_id），再用备份恢复
+  await ctx.request('DELETE', `/api/homework-categories/${cat.id}`, { token })
+  const restored = await ctx.upload('/api/backup/restore', {
+    token,
+    buffer: backup.buffer
+  })
+  assert.equal(restored.body.code, 0, restored.body.message)
+
+  const row = await ctx.models.Homework.findByPk(hw.id, { raw: true })
+  assert.equal(Number(row.categoryId), cat.id, '分类与作业的归属关系应一并恢复')
+})
+
+// 老备份（分类表还没进 MODEL_LIST 时导出的）里没有 homework_categories.json，
+// 而作业行仍带着 category_id。这一类包必须能导入——只是分类名已经无从得知，
+// 只能把作业归到「未分类」，绝不能因此整包失败或丢掉作业本身。
+withDb('恢复：老备份没有分类文件时，作业保留并归为未分类', async () => {
+  const cat = await mkCategory('不会进老备份的分类')
+  const hw = await mkHomework('老备份里的作业', cat.id)
+  const backup = await ctx.requestBinary('/api/backup', { token })
+
+  const zip = await JSZip.loadAsync(backup.buffer)
+  zip.remove('homework_categories.json')
+  const hws = JSON.parse(await zip.file('homeworks.json').async('string'))
+  // 让这条作业指向一个确定不存在的分类，模拟老备份里的悬空引用
+  zip.file(
+    'homeworks.json',
+    JSON.stringify(hws.map((h) => (h.id === hw.id ? { ...h, categoryId: 987654 } : h)))
+  )
+  const buf = await zip.generateAsync({ type: 'nodebuffer' })
+
+  // 先清掉作业，确认恢复真的把它写回来了
+  await ctx.request('DELETE', `/api/homeworks/${hw.id}`, { token })
+
+  const res = await ctx.upload('/api/backup/restore', { token, buffer: buf })
+  assert.equal(res.body.code, 0, `外键指向不存在的分类不该让整包失败：${res.body.message}`)
+
+  const row = await ctx.models.Homework.findByPk(hw.id, { raw: true })
+  assert.ok(row, '作业本身必须保留，不能因为分类丢了就连作业一起丢')
+  assert.equal(row.categoryId, null, '找不到的分类应置空，而不是保留悬空 id')
+  assert.ok(res.body.data.relaxedTotal >= 1, '应如实报告「归为未分类」的条数')
+  assert.match(res.body.message, /未分类/)
+})

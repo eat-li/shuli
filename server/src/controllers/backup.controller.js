@@ -7,6 +7,7 @@ const {
   sequelize,
   Question,
   Homework,
+  HomeworkCategory,
   HomeworkQuestion,
   HomeworkStudent,
   Student,
@@ -124,11 +125,24 @@ exports.updatePolicy = async (req, res, next) => {
 //
 // refs 声明该表的外键指向哪张表（键为模型属性名，值为 MODEL_LIST 里的 key）。
 // 恢复时用它校验引用是否有效——备份包里的数据未必自洽（见下方 restore 里的说明）。
+//
+// 指向的父数据不存在时，默认丢弃这一行；若该外键本身允许为空，把它列进 nullableRefs，
+// 恢复时只把这一列置空、保留整行。作业的分类就是这种：分类没了是小事，
+// 把整节课的记录连同一串关联一起丢掉是大事。
 const MODEL_LIST = [
   { key: 'knowledge_categories', model: KnowledgeCategory },
+  // 作业分类：homework.category_id 指向它，必须排在 homeworks 之前。
+  // 曾经漏在这里，导致「导出不含分类、恢复时作业的外键指向不存在的分类」整包失败。
+  // optional：加分类表之前导出的老备份没有这个文件，按空表处理。
+  { key: 'homework_categories', model: HomeworkCategory, optional: true },
   { key: 'students', model: Student },
   { key: 'questions', model: Question },
-  { key: 'homeworks', model: Homework },
+  {
+    key: 'homeworks',
+    model: Homework,
+    refs: { categoryId: 'homework_categories' },
+    nullableRefs: ['categoryId']
+  },
   {
     key: 'homework_questions',
     model: HomeworkQuestion,
@@ -240,6 +254,7 @@ function buildReadme() {
     '',
     '文件说明：',
     '  knowledge_categories.json  知识点分类',
+    '  homework_categories.json   作业分类（可多级）',
     '  students.json              学生名单',
     '  questions.json             题目（含题干、选项、答案、解析等）',
     '  homeworks.json             作业基本信息',
@@ -346,10 +361,14 @@ exports.restore = async (req, res, next) => {
     // 一直没报错；换到有外键约束的库恢复时，一条 student_id 指向已删学生的关联就足以
     // 让整包恢复失败（ER_NO_REFERENCED_ROW_2）。这里改为跳过并如实报告，不牵连其余数据。
     const skipped = {}
+    // 被「断开引用」而不是丢弃的记录：外键列允许为空时，父数据缺失只清空这一列。
+    // 与 skipped 分开报，是因为两者对老师意味着完全不同的事——
+    // 前者是「这条关联没恢复」，后者是「这条记录在，只是归到了未分类」。
+    const relaxed = {}
     await sequelize.transaction(async (t) => {
       const validIds = {}
 
-      for (const { key, model, refs } of MODEL_LIST) {
+      for (const { key, model, refs, nullableRefs } of MODEL_LIST) {
         const rows = Array.isArray(data[key]) ? data[key] : []
 
         // 保留主键与时间戳，便于按主键恢复关联关系
@@ -372,18 +391,33 @@ exports.restore = async (req, res, next) => {
         let accepted = records
         if (refs && records.length) {
           const dropped = []
-          accepted = records.filter((row) => {
-            const broken = Object.entries(refs).find(([attr, parentKey]) => {
+          const detached = []
+          const canNull = new Set(nullableRefs || [])
+          accepted = []
+          for (const row of records) {
+            let patched = null
+            let drop = false
+            for (const [attr, parentKey] of Object.entries(refs)) {
               const value = row[attr]
-              if (value === undefined || value === null) return false
+              if (value === undefined || value === null) continue
               const parents = validIds[parentKey]
-              return parents && !parents.has(Number(value))
-            })
-            if (!broken) return true
-            dropped.push({ id: row.id, field: broken[0], value: row[broken[0]], parent: broken[1] })
-            return false
-          })
+              // parents 为空集同样算「父数据不存在」：老备份里没有这张表时，
+              // 引用它的列只剩置空一条出路（否则整行都会被丢）。
+              if (!parents || parents.has(Number(value))) continue
+              if (canNull.has(attr)) {
+                if (!patched) patched = { ...row }
+                patched[attr] = null
+                detached.push({ id: row.id, field: attr, value, parent: parentKey })
+              } else {
+                dropped.push({ id: row.id, field: attr, value, parent: parentKey })
+                drop = true
+                break
+              }
+            }
+            if (!drop) accepted.push(patched || row)
+          }
           if (dropped.length) skipped[key] = dropped
+          if (detached.length) relaxed[key] = detached
         }
 
         if (accepted.length) {
@@ -399,12 +433,14 @@ exports.restore = async (req, res, next) => {
     })
 
     const skippedTotal = Object.values(skipped).reduce((sum, list) => sum + list.length, 0)
+    const relaxedTotal = Object.values(relaxed).reduce((sum, list) => sum + list.length, 0)
+    const notes = []
+    if (skippedTotal) notes.push(`${skippedTotal} 条关联记录因引用的数据已不存在被跳过`)
+    if (relaxedTotal) notes.push(`${relaxedTotal} 条记录的所属分类在备份中不存在，已归为「未分类」`)
     ok(
       res,
-      { counts: result, skipped, skippedTotal },
-      skippedTotal
-        ? `恢复完成，其中 ${skippedTotal} 条关联记录因引用的数据已不存在被跳过`
-        : '恢复完成'
+      { counts: result, skipped, skippedTotal, relaxed, relaxedTotal },
+      notes.length ? `恢复完成，其中 ${notes.join('；')}` : '恢复完成'
     )
   } catch (e) {
     next(e)
