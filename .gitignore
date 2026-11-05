@@ -1,0 +1,23 @@
+node_modules/
+dist/
+.env
+*.log
+.DS_Store
+.pnpm-store/
+.vscode/
+
+# 运行时数据：SQLite 库、本地上传、自动生成的密钥（绝不入库）
+server/data/
+
+# 本地设计稿与页面截图（体积大，仅本地参考，不入库）
+design-preview/
+# 本地草稿区：issue 记录、验证截图、临时脚本
+.scratch/
+.esbuild-tmp/
+# 本地 agent 工具配置（与项目运行无关，不入库）
+.agents/
+.claude/
+.workbuddy/
+skills-lock.json
+.impeccable.md
+.dsh-progress/

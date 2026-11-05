@@ -1,0 +1,702 @@
+/* 主题变量已拆分到 theme-tokens.css，切换主题时替换该文件即可 */
+@import './theme-tokens.css';
+
+/* ============================================================================
+   全局基础样式 · 「灰阶墨线」（Neutral Ink）
+   ----------------------------------------------------------------------------
+   本文件只做两件事：
+   1. 铺底：偏向品牌色的冷灰白（底纹由 --paper-texture 控制，默认关）；
+   2. 把 Element Plus 的组件统一到本项目的材质与圆角语言上。
+   页面级样式留在各自 .vue 的 scoped 块里。
+
+   2026-10 重制的取舍记在 theme-tokens.css 顶部，这里只重复与「组件」直接相关的
+   那一条：**卡片从玻璃改回实心白**。理由是上一版自己留下的实测记录 ——
+   浅色玻璃在浅色底上合成色恒为纯白，既不透亮也没有 hover 反馈，
+   只白付一个 backdrop-filter 合成层。实心白卡靠「白 vs 冷灰底」的亮度差
+   建立层级，比模糊层更干净、更省，也更符合「长时间阅读」的场景。
+   （同日第二轮把基底从色相中性的 #F5F5F3 换成 #EEF2F9 —— 中性灰满屏铺开
+   会读成水泥灰，见 theme-tokens.css 头部「第 5 条」。）
+   （v3 又回到中性灰 #F4F5F6：面板已改成实心白 + 分层投影，中性底不再发灰；
+   强调色也从群青换成墨黑，见 theme-tokens.css「第 6 条」。）
+   （v4 参考现代资产看板：台面 #F6F7F8、发丝级投影、无衬线标题、
+   悬停不位移，见 theme-tokens.css「第 7 条」。）
+   ============================================================================ */
+html,
+body,
+#app {
+  height: 100%;
+}
+
+/* 选中态：群青底白字，整站唯一一处大面积强调色 */
+html {
+  background: var(--paper);
+  scroll-behavior: smooth;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* 表单控件单独声明字体 —— 这是浏览器的一条历史行为，不是疏漏。
+   <button>/<input>/<select>/<textarea> 在 UA 样式表里被显式设成了
+   「form control 系统字体」，因此**不继承** body 的 font-family。
+   实测（headless Chrome，Windows）：全站 162 个 .el-button 与所有
+   .el-input__inner 的 computed font-family 都是裸 Arial，
+   而页面其余文字是 --font-body 的系统栈 —— 中文会回退到系统字体所以
+   不容易发现，但数字与拉丁字母（成绩、题号、日期、公式变量）实际是用
+   Arial 渲染的，与周围文字不是同一套字。
+   注意 Element Plus 帮不上忙：它的 --el-font-family 只在 :root 里声明过，
+   从未被任何 font-family 消费，是死令牌；
+   只有 .el-select__input / .el-input-tag__input 这几个内部节点写了
+   font-family:inherit，所以输入框「看起来」是对的，按钮则完全没有继承。
+   这里用 inherit 把两个族的字体一次接回 --font-body。
+   字号不在这里一并 inherit：实测裸 <button> 的 UA 字号是 13.3333px
+   （16px × 5/6），比正文 14px 略小，但受影响的两个控件 —— 表格排序
+   .caret-wrapper 与 .ql-add —— 都是空内容的图标按钮，字形不参与渲染，
+   体积由 width/height 决定。给它们强塞字号只会引入没有视觉收益的覆盖。 */
+button,
+input,
+select,
+textarea {
+  font-family: inherit;
+}
+
+body {
+  margin: 0;
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+
+  /* 纸面：只铺一层纯色。上一版在右下角压了一道径向暖影（让「纸有正反两面」），
+     在暖米底上读得出来，换到中性灰白底后会变成一块说不清来源的灰斑，故撤掉。
+     现在整站的层次完全由「白面板 / 冷灰底」这一档亮度差承担 —— 更安静，
+     也让任何一处多余的阴影都立刻显形（这本身是防止材质回潮的护栏）。
+     色相已偏向品牌色（见 theme-tokens.css 开头「第 5 条」）。 */
+  background-color: var(--paper);
+  background-image: none;
+}
+
+/* 底纹：默认关闭，由 --paper-texture 单点控制。
+   上一版是固定 32px 的方格纸底纹，全屏与卡片投影叠加会产生摩尔纹，
+   是「陈旧」观感的主要来源之一。想找回纸感时改令牌即可（见 theme-tokens.css）。 */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image: var(--paper-texture);
+  background-size:
+    100% 32px,
+    100% 32px;
+}
+
+/* 内容层抬到纸纹之上 */
+#app {
+  position: relative;
+  z-index: 1;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+::selection {
+  color: var(--on-accent);
+  background: var(--moss);
+}
+
+/* 键盘可达性：全站唯一的聚焦环样式 */
+:focus-visible {
+  outline: 2px solid var(--moss);
+  outline-offset: 2px;
+}
+
+/* —— 触控与滚动 —— */
+button,
+a,
+summary,
+[role='button'],
+.el-button,
+.el-menu-item,
+.el-checkbox,
+.el-radio {
+  touch-action: manipulation;
+}
+/* 弹层打开时滚到底不再把滚动传给底层页面（滚动穿透） */
+.el-overlay {
+  overscroll-behavior: contain;
+}
+
+/* 标题走无衬线：v4 起靠字号 + 字重 + 负字距建立层级，不再靠衬线 */
+h1,
+h2,
+h3 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  color: var(--ink);
+  letter-spacing: -0.012em;
+}
+
+/* ============================================================================
+   纸面基元（原 .glass-surface；类名保留以免既有页面失样式）
+   ============================================================================ */
+.glass-surface {
+  background-color: var(--surface);
+  border: 1px solid var(--edge);
+}
+
+/* ============================================================================
+   Element Plus · 卡片：实心白纸 + 极淡描边 + 两层柔和投影
+   ----------------------------------------------------------------------------
+   三件事：1. 实心白底（不做模糊，理由见 theme-tokens.css 顶部第 3 条）；
+   2. 深色低透明度描边界定边界（实心卡上画白边等于没边）；
+   3. 上浮而不是缩放 —— 卡片是容器，缩放它会让文字跟着抖。
+   ============================================================================ */
+.el-card {
+  /* ⚠️ 必须先把 Element Plus 自己的那几个卡片变量改掉，而不是只覆盖属性。
+     EP 的 el-card.css 里 `--el-card-padding: 20px` 被 __header / __body / __footer
+     三处消费，只改属性等于和 EP 打特异性游击；改变量是釜底抽薪。 */
+  --el-card-border-radius: var(--card-radius);
+  --el-card-border-color: var(--card-edge);
+  --el-card-bg-color: var(--card-bg);
+  --el-card-padding: 18px 20px;
+  background-color: var(--card-bg);
+  background-image: none;
+  /* 1px 细边是 v4 的主要分层手段，投影只留发丝级。 */
+  border: 1px solid var(--card-edge);
+  border-radius: var(--card-radius);
+  /* 令牌已置 none，这里保留消费点，方便日后单点恢复玻璃时不改组件。 */
+  -webkit-backdrop-filter: var(--card-blur);
+  backdrop-filter: var(--card-blur);
+  /*
+   * Element Plus 给 .el-card 设了 overflow:hidden、给 .el-card__body 设了 overflow:auto。
+   * 按 CSS 规范，祖先的 overflow 只要不是 visible 就是「滚动容器」，哪怕它自己根本不滚动；
+   * 而 position:sticky 是相对「最近的滚动容器」定位的 —— 于是卡片里的 sticky 元素必然失效：
+   * 真正在滚动的是 MainLayout 的 .main，却被这两层截住，sticky 就永远不动。
+   * 卡片本身自适应高度、body 也从不会真的滚动，所以这里放开：
+   * 卡片用 clip 保留圆角裁切但不产生滚动容器，body 直接 visible。
+   */
+  overflow: clip;
+  transition:
+    transform var(--dur-hover) var(--ease),
+    box-shadow var(--dur-hover) var(--ease),
+    border-color var(--dur-hover) var(--ease);
+}
+/* ⚠️ 卡片阴影必须用这一组高特异性选择器写，不能只写 .el-card。
+   实测（element-plus@2.14.4 theme-chalk/el-card.css）：
+     .el-card.is-always-shadow{box-shadow:var(--el-box-shadow-light)}
+   这条是 (0,2,0)，比 `.el-card`(0,1,0) 高 —— 也就是说**旧版的
+   `--card-shadow` 三层投影从来没生效过**，卡片实际一直在用 EP 那个
+   只有 1px 的方案；「卡片看起来很薄、浮不起来」有一部分原因在这里。
+   两个 shadow 类都列出来，剩下的交给加载顺序（theme.css 在 EP 之后）。 */
+.el-card,
+.el-card.is-always-shadow,
+.el-card.is-never-shadow {
+  box-shadow: var(--card-shadow);
+}
+/* 悬停：只让描边深一档，不位移、不放大。
+   v4 起卡片是「台面上的面板」而不是「浮起来的纸」——位移会让一屏十几张卡
+   一起晃，是旧式后台最显眼的动效噪音。去掉 transform 还顺带消除了
+   position:fixed 包含块的问题（RichEditor 全屏曾踩过，见其 .re-fullscreen 注释）。 */
+.el-card:hover,
+.el-card.is-always-shadow:hover,
+.el-card.is-hover-shadow:hover,
+.el-card.is-never-shadow:hover {
+  transform: none;
+  border-color: var(--card-edge-strong);
+  box-shadow: var(--card-shadow);
+}
+.el-card:active {
+  border-color: var(--card-edge);
+  box-shadow: var(--card-shadow-press);
+}
+.el-card__body {
+  padding: 18px 20px;
+  /* 同 .el-card：去掉 EP 默认的 overflow:auto，否则它是卡片内 sticky 失效的元凶 */
+  overflow: visible;
+}
+/* 卡片头：14px/600 + 细分隔线，与参考图的「小标题 + 内容」一致。
+   分隔线用 --card-hair（几乎不可见），只为在长卡片里给眼睛一个停点。 */
+.el-card__header {
+  padding: 16px 20px 14px;
+  border-bottom: 1px solid var(--card-hair);
+  font-size: var(--text-base);
+  font-weight: 600;
+  color: var(--ink);
+  letter-spacing: -0.005em;
+}
+/* 无阴影卡（shadow="never"）：筛选栏、工具条这类「容器」多用它，
+   连悬停描边变化也不给 —— 它不是一个可被指向的对象。 */
+.el-card.is-never-shadow {
+  box-shadow: none;
+}
+.el-card.is-never-shadow:hover {
+  transform: none;
+  box-shadow: none;
+  border-color: var(--card-edge);
+}
+
+/* ============================================================================
+   Element Plus · 表格：线框化，行悬停是极淡的一层而不是加色块
+   ============================================================================ */
+.el-table {
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  background-color: transparent;
+  /* 数据表在卡片里，不需要自己的外框；行与行之间一条细线就够 */
+  --el-table-border-color: var(--card-hair);
+  --el-table-border: 1px solid var(--card-hair);
+}
+.el-table th.el-table__cell {
+  font-weight: 500;
+  /* 小号灰字表头：不靠底色块，也不靠粗体，靠颜色退后 */
+  font-size: var(--text-xs);
+  letter-spacing: 0.02em;
+  color: var(--ink-soft);
+  /* 用自有的 --table-head-bg 而不是 --el-table-header-bg-color：
+     Element Plus 在 .el-table 上重新定义了后者，它在 DOM 里比 :root 更近，
+     会把它遮蔽掉。 */
+  background-color: var(--table-head-bg) !important;
+}
+.el-table .el-table__cell {
+  padding: 11px 0;
+}
+.el-table td.el-table__cell {
+  border-bottom: 1px solid var(--card-hair);
+}
+.el-table tbody tr:hover > td.el-table__cell {
+  background-color: var(--table-hover-bg) !important;
+}
+/* 页面里的 el-table 大多带 border / stripe：
+   border 会画出竖向网格，stripe 会给隔行铺底——两者都会把现代看板拉回 Excel。
+   这里统一去掉竖线与斑马纹，只保留横向分隔线和悬停。 */
+.el-table--border .el-table__cell {
+  border-right: none;
+}
+.el-table--border::after,
+.el-table--border::before,
+.el-table--border .el-table__inner-wrapper::after {
+  display: none;
+}
+.el-table .el-table__row--striped td.el-table__cell {
+  background-color: transparent !important;
+}
+.el-table__inner-wrapper::before,
+.el-table__border-left-patch {
+  background-color: transparent;
+}
+
+/* ============================================================================
+   Element Plus · 按钮：细边白底 + 实心墨主按钮，状态变化只走底色
+   ============================================================================ */
+.el-button {
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  vertical-align: middle;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--edge);
+  background-color: var(--surface);
+  background-image: none;
+  box-shadow: none;
+  transition:
+    background-color var(--dur) var(--ease),
+    border-color var(--dur) var(--ease),
+    color var(--dur) var(--ease);
+}
+.el-button .el-icon {
+  vertical-align: middle;
+  line-height: 1;
+}
+/* 悬停只变底色与边色：按钮不该在点击前就「跳」一下，
+   现代看板里的按钮重量来自实心色块本身，而不是位移。 */
+.el-button:not(.is-disabled):hover {
+  border-color: var(--edge-soft);
+  background-color: var(--surface-muted);
+  color: var(--ink);
+}
+.el-button:not(.is-disabled):active {
+  background-color: var(--paper-deep);
+}
+
+.el-button.el-button--primary {
+  color: var(--on-accent);
+  border-color: var(--moss);
+  background-color: var(--moss);
+  box-shadow: none;
+}
+.el-button.el-button--primary:not(.is-disabled):hover {
+  background-color: var(--moss-deep);
+  border-color: var(--moss-deep);
+  color: var(--on-accent);
+}
+.el-button.el-button--primary.is-plain,
+.el-button.el-button--primary.is-text,
+.el-button.el-button--primary.is-link {
+  color: var(--moss);
+  background-color: transparent;
+  border-color: transparent;
+  box-shadow: none;
+}
+
+.el-button.el-button--danger {
+  color: var(--on-accent);
+  border-color: var(--danger);
+  background-color: var(--danger);
+  box-shadow: none;
+}
+.el-button.el-button--danger:not(.is-disabled):hover {
+  background-color: var(--btn-danger-hover-from);
+  border-color: var(--btn-danger-hover-from);
+  color: var(--on-accent);
+}
+.el-button.el-button--danger.is-plain,
+.el-button.el-button--danger.is-text,
+.el-button.el-button--danger.is-link {
+  color: var(--danger);
+  background-color: transparent;
+  border-color: transparent;
+  box-shadow: none;
+}
+
+/* 文字/链接按钮不该有纸厚 */
+.el-button.is-link,
+.el-button.is-text {
+  background-color: transparent;
+  border-color: transparent;
+  box-shadow: none;
+}
+.el-button.is-link:not(.is-disabled):hover,
+.el-button.is-text:not(.is-disabled):hover {
+  background-color: var(--surface-muted);
+  transform: none;
+  box-shadow: none;
+}
+
+.el-button.is-disabled,
+.el-button.is-disabled:hover {
+  transform: none;
+  box-shadow: none;
+  opacity: 0.5;
+}
+
+/* ============================================================================
+   Element Plus · 表单控件：白底 + 1px 线，聚焦换成墨边 + 淡光晕
+   ============================================================================ */
+.el-input__wrapper,
+.el-select__wrapper,
+.el-textarea__inner {
+  background-color: var(--surface);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 0 0 1px var(--line) inset;
+  transition:
+    box-shadow var(--dur) var(--ease),
+    background-color var(--dur) var(--ease);
+}
+.el-input__wrapper:hover,
+.el-select__wrapper:hover,
+.el-textarea__inner:hover {
+  box-shadow: 0 0 0 1px var(--edge-soft) inset;
+}
+/* 聚焦：1.5px 墨迹边 + 一圈 3px 的极淡光晕。
+   光晕不是为了好看，是为了在密集表单里让「当前在哪个框」在余光中也能看到。 */
+.el-input__wrapper.is-focus,
+.el-select__wrapper.is-focused,
+.el-textarea__inner:focus {
+  background-color: var(--surface);
+  box-shadow:
+    0 0 0 1.5px var(--moss) inset,
+    0 0 0 3px rgba(17, 20, 24, 0.08);
+}
+.el-input__wrapper,
+.el-select__wrapper {
+  min-height: 34px;
+}
+.el-form-item__label {
+  color: var(--ink-regular);
+  letter-spacing: 0.02em;
+}
+
+/* ============================================================================
+   Element Plus · 弹层：遮罩压淡，面板是实心纸
+   ============================================================================ */
+.el-overlay {
+  background-color: rgba(16, 24, 40, 0.3);
+}
+
+.el-dialog {
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--edge);
+  background-color: var(--surface);
+  background-image: none;
+  box-shadow: var(--shadow-pop);
+}
+.el-dialog__header {
+  border-bottom: 1px solid var(--hair);
+  margin-right: 0;
+  padding-bottom: 16px;
+}
+.el-dialog__title {
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+}
+.el-dialog__body {
+  color: var(--ink-regular);
+}
+
+.el-drawer {
+  background-color: var(--surface);
+  background-image: none;
+  border-left: 1px solid var(--edge);
+  box-shadow: var(--shadow-pop);
+}
+.el-drawer__header {
+  margin-bottom: 0;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--hair);
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.el-message-box,
+.el-popover.el-popper,
+.el-dropdown__popper,
+.el-select__popper,
+.el-picker__popper {
+  border-radius: var(--radius);
+  border: 1px solid var(--edge);
+  background-color: var(--surface);
+  background-image: none;
+  box-shadow: var(--shadow-pop);
+}
+.el-popper.is-light > .el-popper__arrow::before {
+  background: var(--surface);
+  border-color: var(--edge);
+}
+.el-message {
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--edge);
+  background-color: var(--surface);
+  background-image: none;
+  box-shadow: var(--shadow-pop);
+}
+
+/* ============================================================================
+   Element Plus · 其余组件
+   ============================================================================ */
+.el-pagination {
+  font-family: var(--font-data);
+  font-variant-numeric: tabular-nums;
+}
+.el-pagination.is-background .el-pager li,
+.el-pagination.is-background .btn-prev,
+.el-pagination.is-background .btn-next {
+  background-color: var(--surface);
+  border: 1px solid var(--edge);
+  border-radius: var(--radius-xs);
+  box-shadow: none;
+  transition:
+    box-shadow var(--dur) var(--ease),
+    background-color var(--dur) var(--ease),
+    border-color var(--dur) var(--ease);
+}
+.el-pagination.is-background .el-pager li:hover,
+.el-pagination.is-background .btn-prev:hover,
+.el-pagination.is-background .btn-next:hover {
+  border-color: var(--edge-soft);
+  color: var(--moss);
+}
+.el-pagination.is-background .el-pager li.is-active {
+  color: var(--on-accent);
+  background-color: var(--moss);
+  border-color: var(--moss);
+}
+
+/* 标签：小圆角、无边框，靠淡底与文字色区分类型（参考图的 badge 语言） */
+.el-tag {
+  border-radius: var(--radius-xs);
+  border-color: transparent;
+  background-color: var(--surface-muted);
+  color: var(--ink-regular);
+}
+
+/* 提示条：保留 EP 的浅色块底（色值已由 --el-color-*-light-9 对齐本版语义色），
+   只统一圆角与内边距，并去掉左侧那道 3px 竖条 —— 块底本身已经说明等级，
+   再叠一条近黑竖条会被读成告警，也是上一版「后台感」的来源之一。 */
+.el-alert {
+  border-radius: var(--radius);
+  border: 1px solid var(--edge);
+  padding: 12px 16px;
+}
+.el-alert__title {
+  font-size: var(--text-sm);
+}
+
+.el-empty__description p {
+  color: var(--ink-soft);
+}
+
+.el-switch.is-checked .el-switch__core {
+  border-color: var(--moss);
+  background-color: var(--moss);
+}
+.el-checkbox__input.is-checked .el-checkbox__inner,
+.el-checkbox__input.is-indeterminate .el-checkbox__inner,
+.el-radio__input.is-checked .el-radio__inner {
+  border-color: var(--moss);
+  background-color: var(--moss);
+}
+.el-checkbox__input.is-checked + .el-checkbox__label,
+.el-radio__input.is-checked + .el-radio__label {
+  color: var(--moss);
+}
+
+.el-loading-mask {
+  background-color: rgba(246, 247, 248, 0.72);
+}
+
+/* KaTeX 公式：默认 nowrap 会让超长公式横向溢出，这里放开换行，块级公式再加横向滚动兜底 */
+.katex {
+  white-space: normal;
+  overflow-wrap: break-word;
+  max-width: 100%;
+}
+.katex-display > .katex {
+  white-space: normal;
+}
+.katex-display {
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 0.4em 0;
+}
+
+/* 滚动条：细方条 —— 宽 10px + 3px 透明边框 = 4px 视觉宽度。
+   悬停时加宽到 6px：滚动条本身是「需要时才被注意」的元素，
+   常态应该几乎不可见，指向时才给出抓取目标。 */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(16, 24, 40, 0.16);
+  border-radius: 999px;
+  border: 3px solid transparent;
+  background-clip: content-box;
+  transition: background-color var(--dur) var(--ease);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(16, 24, 40, 0.3);
+  background-clip: content-box;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* 用户系统开启「减少动态效果」时，关闭装饰性动画与过渡。
+   注意这里只把「时长」压掉，**没有**回收悬停/按压的视觉反馈 ——
+   位移和缩放会被下面的显式 reset 去掉，但颜色与阴影的切换仍然发生，
+   因为那是「状态反馈」而不是「装饰动画」：全砍掉会让用户不知道点没点上。 */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  /* 去掉位移与缩放，只留颜色/阴影的状态切换。
+     这里把全站自定义卡类统一登记 —— 它们是各自组件的 scoped 样式，
+     不在这里显式 reset 就会被漏掉。新增自定义卡时请补进这张表。 */
+  .el-card:hover,
+  .el-card:active,
+  .qcard:hover,
+  .qcard:active,
+  .kb-card:hover,
+  .kb-card:active,
+  .cat-card:hover,
+  .cat-card:active,
+  .cc:hover,
+  .cc:active,
+  .mcard:hover,
+  .mcard:active,
+  .stu-card:hover,
+  .stu-card:active,
+  .login-card,
+  .stat-card:hover,
+  .stat-card:active,
+  .quick-card:hover,
+  .quick-card:active,
+  .el-button:not(.is-disabled):hover,
+  .el-button:not(.is-disabled):active {
+    transform: none !important;
+  }
+}
+
+/* 用户系统开启「减少透明度」时，浮层退回完全不透明。
+   本项目卡片已经是实心底，这里实际只覆盖弹层与遮罩 —— 保留这段是因为
+   一旦某个组件将来引入半透明，这个开关必须能兜住它。 */
+@media (prefers-reduced-transparency: reduce) {
+  .el-dialog,
+  .el-drawer,
+  .el-message-box,
+  .el-popover.el-popper,
+  .el-dropdown__popper,
+  .el-select__popper,
+  .el-picker__popper,
+  .el-message {
+    background-color: var(--surface) !important;
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+  }
+}
+
+/* 用户系统开启「高对比度」时，所有面板边界由实色线来定义。
+   依据：低视力下「一档亮度差」不足以被感知，必须给出一条明确的边。 */
+@media (prefers-contrast: more) {
+  .el-card,
+  .cat-card:not(.is-active),
+  .qcard,
+  .kb-card,
+  .cc,
+  .mcard,
+  .stu-card,
+  .login-card,
+  .stat-card,
+  .quick-card {
+    background-color: var(--surface) !important;
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+    border-color: var(--ink) !important;
+    border-width: 1.5px !important;
+  }
+  /* 题库卡那道 3px 左边线是「属于哪个题库」的身份标记，不是材质装饰，
+     即便在高对比度下也要留住它的颜色，否则所有题库卡会长得一模一样。 */
+  .kb-card {
+    border-left-color: var(--ink) !important;
+    border-left-width: 3px !important;
+  }
+  .el-card__header {
+    border-bottom-color: var(--ink) !important;
+  }
+  .el-button {
+    border-color: var(--ink) !important;
+  }
+}
+
+/* 弹层内部滚到边界时不要继续带动背后的页面 */
+.el-overlay-dialog,
+.el-drawer__body,
+.el-message-box__content {
+  overscroll-behavior: contain;
+}

@@ -1,0 +1,5 @@
+node_modules
+dist
+pnpm-lock.yaml
+client/dist
+server/migrations

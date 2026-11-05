@@ -1,0 +1,21 @@
+{
+  "name": "shuli",
+  "version": "0.1.0",
+  "private": true,
+  "license": "MIT",
+  "packageManager": "pnpm@11.3.0",
+  "scripts": {
+    "dev": "pnpm --parallel --filter \"./client\" --filter \"./server\" dev",
+    "dev:client": "pnpm --filter \"./client\" dev",
+    "dev:server": "pnpm --filter \"./server\" dev",
+    "build": "pnpm --filter \"./client\" build",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "node --test --test-concurrency=1 \"server/test/*.test.js\""
+  },
+  "devDependencies": {
+    "eslint": "^9.9.0",
+    "prettier": "^3.3.3"
+  }
+}

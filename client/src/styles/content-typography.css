@@ -1,0 +1,82 @@
+/* ==========================================================================
+   正文排版基线（全局，非 scoped）
+   --------------------------------------------------------------------------
+   这个文件的唯一职责：把「正文」「编辑器」「公式」「图片」四者的度量
+   收成同一套，让同一道题在编辑态和浏览态长得一样。
+
+   为什么必须是全局样式：
+     .rich-content 在 RichContent.vue、.re-content 在 RichEditor.vue，
+     它们各自 scoped 的规则带 [data-v-xxxx] 属性选择器，特异性高于任何
+     普通全局选择器。所以这里只负责「定义基线变量 + 兜底」，
+     组件内如果残留硬编码 font-size，需要在组件内改成引用变量。
+   ========================================================================== */
+
+:root {
+  /* 正文基准：沿用既有字号阶梯的 16px，不再让各处主题选择器各自继承 */
+  --content-font-size: var(--text-lg, 16px);
+  --content-line-height: 1.75;
+  /* 行内公式相对正文的比例。KaTeX 默认 1.21em 偏大，1.05em 与中文正文更齐。
+     需要一个值而不是"跟着 KaTeX 默认走"：默认值会随版本变，统一就会漂。 */
+  --content-math-size: 1.05em;
+  /* 题图的最大高度：一屏内能同时看到题干和图形，超高的几何图会挤压阅读。
+     60vh 在 1080p 上约 540px，一道题就被图形占满，故收到 40vh。
+     注意这里只管屏幕：纸上尺寸由 printHtml.ts 的 FIGURE_MAX_*_MM 决定。 */
+  --content-figure-max-h: 40vh;
+}
+
+/* —— 正文 —— */
+.rich-content,
+.re-content .ProseMirror {
+  font-size: var(--content-font-size);
+  line-height: var(--content-line-height);
+}
+
+/* —— 公式：与正文同一基准 —— */
+/* 只压 .katex 本身。不要再给 .Tiptap-mathematics-render 这类「KaTeX 的父节点」
+   也设 font-size：那是 em 会连乘，公式会被放大成 1.05 × 1.05。 */
+.rich-content .katex,
+.re-content .ProseMirror .katex {
+  font-size: var(--content-math-size);
+}
+
+/* —— 图片：撑不破容器，且按 width/height 属性推导的长宽比占位 —— */
+.rich-content img,
+.re-content .ProseMirror img {
+  max-width: 100%;
+  height: auto;
+}
+
+/* 与编辑态一致：图片单独成行、默认居中。
+   左/右对齐来自 RichEditor 写进 <img class="re-img--*"> 的 class ——
+   内联 style 会被 sanitizeRichHtml 剥掉，class 才能穿过浏览、打印、导出。 */
+.rich-content img {
+  display: block;
+  margin: 6px auto;
+  max-height: var(--content-figure-max-h);
+  object-fit: contain;
+}
+/* 没写宽度的老图在宽卡里别铺满整行；有显式宽度就按宽度显示 */
+.rich-content img:not([width]) {
+  max-width: min(100%, 720px);
+}
+.rich-content img.re-img--left {
+  margin-right: auto;
+  margin-left: 0;
+}
+.rich-content img.re-img--right {
+  margin-right: 0;
+  margin-left: auto;
+}
+/* 表格里的插图跟随单元格，不能变成块级居中 */
+.rich-content table img {
+  display: inline;
+  margin: 0;
+  max-height: none;
+}
+
+/* 打印 / 导出 PDF 时不受视口高度限制，否则题图会被裁掉 */
+@media print {
+  .rich-content img {
+    max-height: none;
+  }
+}
