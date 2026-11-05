@@ -109,7 +109,8 @@
 
 ### 给使用者：解压就能用
 
-下载 `shuli-<版本>-win64.zip`，解压到任意目录，双击 **`start.bat`**。
+到 [Releases](https://github.com/eat-li/shuli/releases/latest) 下载 `shuli-<版本>-win64.zip`，
+解压到任意目录，双击 **`start.bat`**。
 浏览器会自动打开，没有安装步骤，不需要 Node、pnpm，也不需要装数据库。
 
 - 数据在 `server\data\`：`shuli.sqlite` 是全部业务数据，`uploads\` 是上传的图片。
