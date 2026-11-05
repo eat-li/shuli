@@ -1,90 +1,106 @@
 @echo off
-chcp 65001 >nul
-title 数学老师综合管理后台 - 一键启动（打包版）
+rem ============================================================
+rem  Keep this file ASCII-only.
+rem
+rem  cmd.exe parses .bat using the console codepage captured when
+rem  cmd starts, NOT the one set by a later `chcp`. Multi-byte text
+rem  interpreted under the wrong codepage makes the trailing byte of
+rem  a Chinese character swallow the CR, so two lines get glued
+rem  together and the script dies with a meaningless
+rem  "not recognized as a command".
+rem
+rem  All Chinese text is printed by the Node process instead, which
+rem  always speaks UTF-8. Keep this launcher dumb and ASCII.
+rem ============================================================
+title Shuli
 cd /d "%~dp0"
 
-echo ================================================
-echo   数学老师综合管理后台  一键启动（生产/日常使用）
-echo ================================================
-echo.
+set "NODE_EXE="
+if exist "runtime\node.exe" set "NODE_EXE=%CD%\runtime\node.exe"
+if not defined NODE_EXE goto find_node
+goto node_ready
 
-where node >nul 2>nul
-if errorlevel 1 goto no_node
+:find_node
+for /f "delims=" %%I in ('where node 2^>nul') do (
+  if not defined NODE_EXE set "NODE_EXE=%%I"
+)
+if not defined NODE_EXE goto no_node
 
+:node_ready
+rem Front-end bundle ships with the portable package. Only a source
+rem checkout without a build needs to compile it here.
+if exist "client\dist\index.html" goto check_deps
 where pnpm >nul 2>nul
-if errorlevel 1 goto try_pnpm
-
-goto check_deps
-
-:try_pnpm
-echo [提示] 未检测到 pnpm，尝试通过 corepack 启用...
-corepack enable >nul 2>nul
-where pnpm >nul 2>nul
-if errorlevel 1 goto no_pnpm
-
-:check_deps
-if exist "node_modules" goto check_dist
-echo [信息] 首次运行，正在安装依赖，请稍候...
-echo.
+if errorlevel 1 goto no_dist
+echo [setup] building front-end, first run takes about 20 seconds...
 call pnpm install
-if errorlevel 1 goto install_fail
-
-:check_dist
-rem 前端已打包（client\dist\index.html 存在）时直接使用，避免每次启动都构建
-if exist "client\dist\index.html" goto start_server
-echo [信息] 未检测到前端打包产物，正在构建（首次约需 20 秒）...
-echo.
+if errorlevel 1 goto build_fail
 call pnpm build
 if errorlevel 1 goto build_fail
 if not exist "client\dist\index.html" goto build_fail
 
-:start_server
-rem 端口只从 server\.env 读，不在这里再写一份。
-rem 历史上 4300 散落在本文件、.env、vite.config、stop.bat 四处，
-rem 改端口时漏掉一处就会出现「服务在跑但页面打不开」。
+:check_deps
+if exist "server\node_modules" goto resolve_port
+where pnpm >nul 2>nul
+if errorlevel 1 goto no_dist
+echo [setup] installing dependencies, please wait...
+call pnpm install
+if errorlevel 1 goto install_fail
+
+rem Port comes from server\.env when present, otherwise 7788.
+rem The server, this script and stop.bat all read the same file,
+rem so there is exactly one place to change it.
+:resolve_port
 set "PORT="
+if not exist "server\.env" goto default_port
 for /f "usebackq tokens=1,* delims==" %%A in ("server\.env") do (
   if /i "%%A"=="PORT" set "PORT=%%B"
 )
+:default_port
 if not defined PORT set "PORT=7788"
 
-echo [信息] 正在启动服务（后端同时托管前端打包文件）...
+rem The server opens the browser itself once listen() succeeds.
+rem A fixed sleep would open the page before the port is ready on
+rem a slow machine, which looks like "the app is broken".
+set "OPEN_BROWSER=1"
+"%NODE_EXE%" "server\src\index.js"
 echo.
-echo    访问地址: http://localhost:%PORT%
-echo    说明: 前端已使用打包后的 dist 文件，不需要 Vite 开发服务器。
-echo    如需开发模式（改动即时生效），请运行「start-dev.bat」。
-echo    关闭本窗口或按 Ctrl+C 可停止服务。
-echo.
-
-rem 稍等片刻再打开浏览器，避免页面先于服务就绪
-start "" cmd /c "timeout /t 3 >nul & start http://localhost:%PORT%"
-
-call pnpm --filter "./server" start
-echo.
-echo [信息] 服务已停止。
+echo [info] server stopped.
 pause
 exit /b 0
 
 :no_node
-echo [错误] 未检测到 Node.js，请先安装：https://nodejs.org/
+echo.
+echo [error] Node.js runtime not found.
+echo   Portable package: make sure runtime\node.exe exists, and that you
+echo   extracted the archive before running (running from inside a .zip
+echo   never works).
+echo   Source checkout: install Node.js from https://nodejs.org/
+echo.
+echo   See the plain-text readme in this folder for details.
 echo.
 pause
 exit /b 1
 
-:no_pnpm
-echo [错误] 无法启用 pnpm，请手动执行：npm install -g pnpm
+:no_dist
+echo.
+echo [error] client\dist is missing and pnpm was not found.
+echo   Portable package: extract the archive completely, then run again.
+echo   Source checkout: install pnpm, then run pnpm install and pnpm build.
 echo.
 pause
 exit /b 1
 
 :install_fail
-echo [错误] 依赖安装失败，请检查网络后重试。
+echo.
+echo [error] dependency installation failed, check your network and retry.
 echo.
 pause
 exit /b 1
 
 :build_fail
-echo [错误] 前端构建失败，请查看上方输出中的具体报错。
+echo.
+echo [error] front-end build failed, see the output above.
 echo.
 pause
 exit /b 1

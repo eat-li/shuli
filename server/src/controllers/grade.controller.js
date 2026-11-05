@@ -11,7 +11,9 @@ const DEFAULT_LIST_LIMIT = Number(process.env.DEFAULT_LIST_LIMIT) || 1000
 // 统一口径：把不同满分的考试折算成百分比再比较。
 // 满分缺失/为 0 时按 0 分算，和原来逐行 percent() 的行为一致。
 // 注意用真实列名（模型统一 underscored）：这里绕过 Sequelize 的属性名映射
-const PERCENT_SQL = 'COALESCE(`score` / NULLIF(`full_score`, 0) * 100, 0)'
+// 百分比分数：score / full_score * 100，满分缺失或为 0 时按 0 处理，避免除零得到 NULL 再被 SUM 吞掉。
+// 列名不加引号——都是本表唯一列，加反引号是 MySQL 习惯，SQLite 虽兼容但没必要。
+const PERCENT_SQL = 'COALESCE(score / NULLIF(full_score, 0) * 100, 0)'
 
 // 归一化单条成绩输入；非法行返回 null（分数越界、缺学生、分数非数字等）
 const normalize = (it) => {
@@ -203,14 +205,12 @@ exports.cards = async (req, res, next) => {
       })
       for (const row of counts) countByStudent.set(Number(row.studentId), Number(row.count))
 
-      // DATE_FORMAT 而不是直接 MAX：DATEONLY 在 mysql2 里可能被转成 Date 对象，
-      // 再拼进 WHERE 会带上时分秒，反而匹配不到当天。
+      // 取每个学生最近一次考试日期。不能直接 MAX 后原样拼进 WHERE：
+      // 只要该列存的是 datetime（而不是纯 'YYYY-MM-DD'），拼回去就带时分秒，匹配不到当天。
+      // substr(...,1,10) 把两种形态统一截成日期，且是 SQL 标准写法，不依赖某个库的日期函数。
       const maxRows = await ExamScore.findAll({
         where: scope,
-        attributes: [
-          'studentId',
-          [literal("DATE_FORMAT(MAX(`exam_date`), '%Y-%m-%d')"), 'maxDate']
-        ],
+        attributes: ['studentId', [literal('substr(MAX(exam_date), 1, 10)'), 'maxDate']],
         group: ['studentId'],
         raw: true
       })
@@ -277,11 +277,13 @@ exports.summary = async (req, res, next) => {
 
     const where = buildWhere(req.query)
     // 姓名筛选先缩成学生 id 集合：成绩表按 id 过滤，不为一处姓名匹配去 JOIN 大表。
-    // LOCATE 把关键字当字符串字面量，用户输入 % / _ 不会被当成通配符。
+    // 用 instr(被查找串, 关键字) 而不是 LIKE：关键字被当作字面量，
+    // 用户输入 % / _（数学老师写「%」很常见）不会被当成通配符。
+    // 注意 instr 的两个参数顺序与 MySQL 的 LOCATE(关键字, 被查找串) 相反。
     const keyword = String(req.query.studentName || '').trim()
     if (keyword) {
       const matched = await Student.findAll({
-        where: sqlWhere(fn('LOCATE', keyword, col('name')), { [Op.gt]: 0 }),
+        where: sqlWhere(fn('instr', col('name'), keyword), { [Op.gt]: 0 }),
         attributes: ['id'],
         raw: true
       })

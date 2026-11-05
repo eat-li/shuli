@@ -1,18 +1,19 @@
 @echo off
-chcp 65001 >nul
-title 数理 - 卸载开机自启
+rem ASCII-only on purpose: see the note at the top of start.bat.
+title Shuli - remove autostart
 cd /d "%~dp0"
 
 echo ================================================
-echo   取消开机自启
+echo   Remove autostart
 echo ================================================
 echo.
 
 powershell -NoProfile -ExecutionPolicy Bypass -Command ^
-  "$lnk = Join-Path ([Environment]::GetFolderPath('Startup')) '数理.lnk';" ^
-  "if (Test-Path $lnk) { Remove-Item $lnk -Force; Write-Host '[完成] 已移除开机自启快捷方式' } else { Write-Host '[信息] 没有找到自启快捷方式（可能已经卸载过）' }"
+  "$lnk = Join-Path ([Environment]::GetFolderPath('Startup')) 'Shuli.lnk';" ^
+  "if (Test-Path $lnk) { Remove-Item $lnk -Force; Write-Host '[done] startup shortcut removed' } else { Write-Host '[info] no startup shortcut found (already removed?)' }"
 
 echo.
-echo   （这只影响开机自启；正在运行的服务请用「stop.bat」结束）
+echo   This only affects autostart. A running server keeps running:
+echo   use stop.bat to end it.
 echo.
 pause

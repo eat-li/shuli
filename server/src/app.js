@@ -1,4 +1,8 @@
 // Express 应用装配
+// 配置必须在最前面加载：下面 isProd / CORS 白名单都在模块初始化时读取环境变量，
+// 晚一步就会拿到 undefined，表现为「生产模式下仍然全放行」。
+require('./config/env')
+
 const express = require('express')
 const cors = require('cors')
 const compression = require('compression')

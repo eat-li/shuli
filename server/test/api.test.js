@@ -1,11 +1,11 @@
-// 接口级测试：走真实 HTTP + 真实 MySQL（临时库），覆盖路由/鉴权/校验/事务的接线。
+// 接口级测试：走真实 HTTP + 真实 SQLite（临时库），覆盖路由/校验/事务的接线。
 //
 // 与另外两个测试文件的分工：
-//   auth.test.js       只测签名纯函数
-//   paperCompose.test.js / validate.test.js  只测纯函数
+//   aiDifficulty.test.js / paperCompose.test.js / validate.test.js  只测纯函数
 //   本文件             测「HTTP → 中间件 → 控制器 → 模型 → 库」整条链路
 //
-// MySQL 不可用时整体跳过（CI 没有数据库），不会让流水线变红。
+// 不再需要「数据库不可用就跳过」：临时库是进程内新建的 SQLite 文件，
+// 任何机器（含 CI）都能跑完整套。
 const test = require('node:test')
 const assert = require('node:assert/strict')
 

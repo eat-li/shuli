@@ -1,7 +1,7 @@
 // 领域字段 schema：题目与试卷。
 //
-// 放在 utils 而不是控制器里，是为了能被单测直接引用（CI 没有 MySQL，
-// 只有纯函数进得了 server/test）。控制器只负责「解析 → 查库 → 写库 → 组响应」。
+// 放在 utils 而不是控制器里，是为了能被单测直接引用（纯函数，不碰数据库）。
+// 控制器只负责「解析 → 查库 → 写库 → 组响应」。
 const { parse } = require('./validate')
 
 const QUESTION_TYPES = ['choice', 'fill', 'solve']

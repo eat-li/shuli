@@ -23,34 +23,60 @@
 
 ## 快速开始
 
-环境：Node 18+、pnpm、MySQL 8。
+### 给使用者：解压就能用
+
+下载 `shuli-<版本>-win64.zip`，解压到任意目录，双击 **`start.bat`**。
+浏览器会自动打开，没有安装步骤，不需要 Node、pnpm，也不需要装数据库。
+
+- 数据在 `server\data\`：`shuli.sqlite` 是全部业务数据，`uploads\` 是上传的图片。
+  把整个 `data` 目录复制走就是一份完整备份（更推荐用界面里的「设置 → 备份」导 ZIP）。
+- 想开机自启：双击 `autostart-install.bat`。
+- 停止服务：双击 `stop.bat`，或直接关掉那个黑窗口。
+
+> **没有登录**，所以默认只监听 `127.0.0.1`，只有这台电脑能访问。
+> 改成 `HOST=0.0.0.0` 前，请确认你能控制谁能连到这台机器。
+
+### 给开发者：源码运行
+
+环境：Node 18+、pnpm。
 
 ```bash
 pnpm install
-cp server/.env.example server/.env    # 只需填 DB_*，其余可留空
-pnpm dev
+pnpm dev          # 前端 5173，后端 7788
 ```
 
-前端 <http://localhost:5173>，后端 <http://localhost:7788>。
-
-生产 / 日常使用（后端直接托管构建产物，只跑一个进程）：
+首次启动会自动在 `server/data/shuli.sqlite` 建库建表，不需要任何手工初始化。
+日常使用（后端直接托管构建产物，只跑一个进程）：
 
 ```bash
-pnpm build && pnpm --filter ./server start
+pnpm build
+pnpm start
 ```
 
-> **没有登录**，所以默认只监听 `127.0.0.1`。改成 `HOST=0.0.0.0` 前，请确认你能控制谁能连到这台机器。
+出便携包（生成 `release/`，内置 node.exe 与生产依赖，可直接发给别人）：
+
+```bash
+pnpm pack
+```
+
+> `*.bat` 一律只写 ASCII。cmd 解析批处理用的是它启动那一刻的控制台代码页，
+> 脚本里再 `chcp` 也救不回来——夹带中文会把换行吃掉，整份脚本从那里开始报错。
+> 面向用户的提示语都放在 Node 里输出（详见 `.gitattributes` 的说明）。
 
 ## 配置
 
-全部变量见 [`server/.env.example`](server/.env.example)。除数据库外都有默认值，不填也能启动。
+**默认不需要任何配置。** 数据库是本地 SQLite 文件，端口 7788，图片落本地磁盘——
+`server/.env` 不存在也能正常跑。只有要改端口、开局域网访问、接 OSS 或统一托管 AI Key 时，
+才把它从 [`server/.env.example`](server/.env.example) 复制出来，只写要改的那几行。
 
 | 分组 | 关键变量 | 说明 |
 | --- | --- | --- |
 | 服务 | `PORT`、`HOST` | 默认 `7788` / `127.0.0.1` |
-| 数据库 | `DB_HOST`、`DB_PORT`、`DB_NAME`、`DB_USER`、`DB_PASS` | **当前必填**（MySQL 8） |
-| 文件存储 | `STORAGE_DRIVER`、`STORAGE_LOCAL_DIR`、`STORAGE_PUBLIC_BASE_URL` | 默认本地磁盘，见下节 |
-| AI（可选） | `AI_API_KEY`、`AI_MODEL`、`AI_ALLOWED_BASE_URLS` | 不配时 AI 功能不可用，其余功能不受影响 |
+| 数据库 | `DB_FILE` | 默认 `server/data/shuli.sqlite`，一般不用改 |
+| 文件存储 | `STORAGE_DRIVER`、`STORAGE_LOCAL_DIR` | 默认本地磁盘，见下节 |
+| AI（可选） | 一般在界面「设置 → AI」里填 | 不配时 AI 功能不可用，其余功能不受影响 |
+
+端口改动的连锁点只有一处：`server/.env`。启动脚本、停止脚本、Vite 代理都从那里读。
 
 ## 文件存储
 
@@ -75,8 +101,22 @@ STORAGE_PUBLIC_BASE_URL=            # 留空即用相对路径；挂 CDN 时才�
 
 ## 数据
 
-- **迁移**：启动时自动执行 `server/migrations` 中未执行的部分，记录在 `migrations` 表。执行成功才写记录，失败下次重跑。改表请新增迁移文件，不要依赖自动 `alter`。
-- **备份**：设置页可导出全量 ZIP，也可导入恢复。备份是逻辑格式（一堆 JSON），与数据库方言无关；恢复按主键 upsert，不会删除备份里没有的数据。
+- **数据库**：SQLite 单文件，WAL 模式（读写互不阻塞）。整个库就是一个文件，
+  拷走即备份；单进程使用，无需考虑连接池与并发 DDL。
+- **建表**：启动时按模型比对表名，缺表才建，表齐全直接跳过（正常启动约 150ms）。
+- **迁移**：已存在的库要加字段时，在 `server/migrations` 新增迁移文件，启动时自动执行并记入
+  `migrations` 表；执行成功才写记录，失败下次重跑。规矩见 [`server/migrations/README.md`](server/migrations/README.md)。
+- **备份**：设置页可导出全量 ZIP，也可导入恢复。备份是逻辑格式（一堆 JSON），与数据库方言无关；
+  恢复按主键 upsert，不会删除备份里没有的数据。
+
+### 从 MySQL 版本升级
+
+v0.1 及更早的版本用 MySQL。v1.0 换成 SQLite 后**不支持原地升级**，路径是：
+
+1. 在旧版本里「设置 → 备份」导出 ZIP；
+2. 装好新版本，进「设置 → 备份」导入同一个 ZIP。
+
+备份是逻辑格式，跨方言可用，题目里的图片也包含在 ZIP 里。
 
 ## 常用命令
 
@@ -84,8 +124,10 @@ STORAGE_PUBLIC_BASE_URL=            # 留空即用相对路径；挂 CDN 时才�
 | --- | --- |
 | `pnpm dev` | 同时启动前后端（前端 5173，代理 `/api` 到 7788） |
 | `pnpm build` | 构建前端到 `client/dist` |
+| `pnpm start` | 只跑后端，同时托管 `client/dist`（日常使用） |
+| `pnpm pack` | 生成便携包 `release/` |
 | `pnpm lint` | ESLint 检查 |
-| `pnpm test` | 服务端测试；MySQL 不可用时自动跳过 |
+| `pnpm test` | 服务端测试（每个用例开自己的临时 SQLite 库，不需要任何外部服务） |
 | `pnpm --filter ./client i18n:check` | 校验中英文案键树一致 |
 
 ## 目录结构
@@ -94,11 +136,13 @@ STORAGE_PUBLIC_BASE_URL=            # 留空即用相对路径；挂 CDN 时才�
 .
 ├── client/src/            # 前端：api / components / composables / i18n / layouts
 │                          #       plugins / router / styles / types / utils / views
+├── scripts/
+│   └── pack-release.mjs   # 出便携包
 ├── server/
-│   ├── migrations/        # 数据库迁移，按文件名顺序执行
+│   ├── migrations/        # 增量迁移（平时为空，改表时新增）
 │   ├── src/               # config / controllers / middlewares / models
 │   │                      # routes / services / storage / utils
-│   └── test/              # 纯函数测试 + 接口测试（临时库，跑完销毁）
+│   └── test/              # 纯函数测试 + 接口测试（临时库，跑完删文件）
 ```
 
 ## 安全须知
@@ -109,12 +153,7 @@ STORAGE_PUBLIC_BASE_URL=            # 留空即用相对路径；挂 CDN 时才�
 
 ## 状态与路线
 
-v0.1 已完成：移除家长端、移除登录鉴权、图片存储默认本地。
-
-下一步：把默认库换成 SQLite（当前仍需 MySQL），补齐文档与截图，之后发 v1.0。
+v1.0：默认库换成 SQLite，开箱即用——不装数据库、不写配置、不装 Node（便携包）。
+测试不再依赖任何外部服务，`pnpm test` 在任何机器上都能跑完整套。
 
 界面支持中英双语，英文覆盖尚不完整。
-
-## 许可证
-
-[MIT](LICENSE)

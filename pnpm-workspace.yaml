@@ -4,3 +4,6 @@ packages:
 
 allowBuilds:
   esbuild: true
+  # sqlite3 通过 node-pre-gyp 在 install 阶段拉取预编译二进制；
+  # pnpm 默认拦截依赖的构建脚本，不放行会导致 require('sqlite3') 直接失败。
+  sqlite3: true

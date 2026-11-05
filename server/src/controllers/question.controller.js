@@ -37,11 +37,12 @@ const DEFAULT_LIST_LIMIT = Number(process.env.DEFAULT_LIST_LIMIT) || 1000
 
 // 列表排序白名单：只允许这几个 key，避免 order 子句被外部拼进来。
 // 每种排序都追加 id 作次级键——同难度/同时间/同题型的题很多，
-// 没有次级键时 MySQL 的返回顺序不保证稳定，翻页会出现重复或漏题。
+// 没有次级键时数据库的返回顺序不保证稳定，翻页会出现重复或漏题。
 const SORT_ORDERS = {
-  // 难度可能为 NULL（未标注）。MySQL 升序把 NULL 排最前、降序排最后，
+  // 难度可能为 NULL（未标注）。升序时 NULL 会排在最前，
   // 直接排会出现「未标注的题＝最简单的题」这种错位，
   // 所以先用 `difficulty IS NULL` 把有值的挑到前面，再按真实难度排。
+  // （0 = 有值、1 = NULL，升序自然让有值的在前；SQLite 与 MySQL 行为一致。）
   difficulty_asc: [
     [sequelize.literal('difficulty IS NULL'), 'ASC'],
     ['difficulty', 'ASC'],
@@ -60,14 +61,26 @@ const SORT_ORDERS = {
     ['createdAt', 'DESC'],
     ['id', 'DESC']
   ],
-  // type 是 ENUM('choice','fill','solve')，MySQL 按枚举定义顺序排，
-  // 正好是 选择题 → 填空题 → 解答题
+  // 题型顺序写死成 CASE，而不是依赖列本身的排序：
+  // 这个列在 MySQL 上是 ENUM（按定义顺序排），在 SQLite 上是 TEXT（按字典序排）。
+  // 两者碰巧结果一致，但那是巧合而不是保证——把「选择→填空→解答」显式写出来，
+  // 换库、加题型都不用回来重新验证一遍。
   type_asc: [
-    ['type', 'ASC'],
+    [
+      sequelize.literal(
+        "CASE type WHEN 'choice' THEN 1 WHEN 'fill' THEN 2 WHEN 'solve' THEN 3 ELSE 9 END"
+      ),
+      'ASC'
+    ],
     ['id', 'DESC']
   ],
   type_desc: [
-    ['type', 'DESC'],
+    [
+      sequelize.literal(
+        "CASE type WHEN 'choice' THEN 1 WHEN 'fill' THEN 2 WHEN 'solve' THEN 3 ELSE 9 END"
+      ),
+      'DESC'
+    ],
     ['id', 'DESC']
   ]
 }

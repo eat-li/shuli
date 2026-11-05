@@ -14,7 +14,9 @@ module.exports = (sequelize, DataTypes) =>
       comment: '旧结构：[{ type, id }]，type: question题目 / conclusion结论 / knowledge知识点'
     },
     content: {
-      type: DataTypes.TEXT('long'),
+      // 用 TEXT 而不是 TEXT('long')：长度修饰是 MySQL 的 LONGTEXT 写法，
+      // SQLite 的 TEXT 本身不限长度，带参数反而会触发「TEXT with options」告警。
+      type: DataTypes.TEXT,
       comment: '讲义正文（富文本 HTML，可含题目、图片、表格、公式）'
     }
   })

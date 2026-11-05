@@ -9,6 +9,9 @@ dist/
 # 运行时数据：SQLite 库、本地上传、自动生成的密钥（绝不入库）
 server/data/
 
+# 出包脚本的产物：内置 node.exe 与依赖，一百多 MB，只在本地生成
+release/
+
 # 本地设计稿与页面截图（体积大，仅本地参考，不入库）
 design-preview/
 # 本地草稿区：issue 记录、验证截图、临时脚本

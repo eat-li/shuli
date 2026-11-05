@@ -124,8 +124,8 @@ async function updateSubTag({ from, to, knowledgeTag, toKnowledgeTag }) {
     where.knowledgeTag = String(knowledgeTag)
   }
 
-  // 先统计匹配题量：MySQL 的 UPDATE 只返回「实际发生变化」的行数，
-  // 新值与旧值相同时是 0，直接拿来报数会误报成「未找到」。
+  // 先统计匹配题量，不用 UPDATE 的返回值报数：
+  // 新值与旧值相同时受影响行数为 0（各库口径略有差异），直接拿来报数会误报成「未找到」。
   const matched = await Question.count({ where })
   if (!matched) {
     return { matched: 0, renamed: renameSub, moved: moveParent, cleared: false }

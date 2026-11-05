@@ -11,7 +11,9 @@ module.exports = (sequelize, DataTypes) =>
     'knowledgeTagMark',
     {
       id: {
-        type: DataTypes.INTEGER.UNSIGNED,
+        // SQLite 没有 UNSIGNED，写成 INTEGER.UNSIGNED 会触发告警并被降级为普通 INTEGER，
+        // 这里直接按实际类型声明。
+        type: DataTypes.INTEGER,
         primaryKey: true,
         autoIncrement: true
       },
