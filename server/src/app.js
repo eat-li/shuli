@@ -7,6 +7,7 @@ const express = require('express')
 const cors = require('cors')
 const compression = require('compression')
 const fs = require('fs')
+const os = require('os')
 const path = require('path')
 const routes = require('./routes')
 const errorHandler = require('./middlewares/errorHandler')
@@ -18,23 +19,53 @@ const corsOrigins = (process.env.CORS_ORIGINS || defaultCorsOrigins)
   .map((s) => s.trim())
   .filter(Boolean)
 
+// 「本机自己的来源」必须按配置算，不能读请求的 Host 头。
+// Host 完全由请求方控制：DNS rebinding 把外部域名 TTL 改短后解析到 127.0.0.1，
+// 恶意页面的 Origin 就变成了 `http://evil.com:7788`，和按 Host 拼出来的 selfOrigin 一模一样，
+// CORS 白名单当场失效，同一个浏览器里就能读走整个题库（含答案）。
+// 写操作有 JSON content-type 触发预检，本来就被 CORS 挡着；这个洞专门放行的读，危害最大。
+//
+// 放行集合取自管理员改不动的东西：端口配置、回环写法、本机网卡地址、主机名。
+// 反向代理/自定义域名的场景不在这里，用 CORS_ORIGINS 显式声明（见 server/.env.example）。
+const listenPort = Number(process.env.PORT) || 7788
+const listenHost = String(process.env.HOST || '127.0.0.1').trim()
+
+/** 能被浏览器用来访问到「这台机器」的名字：域名一个都不算，rebinding 因此进不来 */
+function selfHostNames() {
+  const names = new Set(['127.0.0.1', 'localhost', '::1', os.hostname()])
+  // 0.0.0.0 / :: 是「监听所有网卡」的写法，不是能被访问的地址，跳过
+  if (listenHost && listenHost !== '0.0.0.0' && listenHost !== '::') names.add(listenHost)
+  for (const entries of Object.values(os.networkInterfaces())) {
+    for (const info of entries || []) {
+      if (info && info.address) names.add(info.address)
+    }
+  }
+  return names
+}
+
+const selfOrigins = new Set(
+  [...selfHostNames()].map((host) => {
+    // IPv6 字面量在 URL 里必须带方括号，否则端口分隔符会解析错
+    const literal = host.includes(':') ? `[${host}]` : host
+    return `http://${literal}:${listenPort}`
+  })
+)
+
 const app = express()
 
 // CORS：生产环境默认只允许本机前端，可通过 CORS_ORIGINS 配置多个来源。
 //
-// 关键：必须放行「请求自身的来源」。打包模式（后端托管 client/dist）下浏览器加载
+// 关键：必须放行「后端自己」的来源。打包模式下后端托管 client/dist，浏览器加载
 // <script type="module"> 会带上 Origin 头，属于同源请求却仍走 CORS 校验；
 // 若白名单里只有 5173（开发服务器），后端就会把自己托管的 JS/CSS 全部 403 掉，
 // 表现为页面白屏、控制台一堆 "Failed to load resource: 403"。
+// 放行的是上面算出的 selfOrigins，不是请求头里的 Host。
 app.use((req, res, next) => {
-  const selfOrigin = `${req.protocol}://${req.get('host')}`
   cors({
-    // CORS 来源判定。必须放行「请求自身的来源」：打包模式下 <script type=module> 也带 Origin，
-    // 属于同源请求却仍走 CORS 校验；白名单只有 5173 时，后端会把自己托管的 JS/CSS 全部 403 掉（白屏）。
     origin(origin, callback) {
       if (
         !origin ||
-        origin === selfOrigin ||
+        selfOrigins.has(origin) ||
         corsOrigins.includes('*') ||
         corsOrigins.includes(origin)
       ) {
