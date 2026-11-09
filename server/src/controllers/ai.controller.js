@@ -685,8 +685,10 @@ function createAgentTools(constraints) {
     // 返回 warnings 让模型自己修补，而不是直接失败。
     async validate_paper(args) {
       // 把草稿交给与刚性管线同一套 validateSelection，保证判卷口径一致
-      const pool = await loadAgentCandidates(constraints)
       const parsed = { sections: Array.isArray(args.sections) ? args.sections : [] }
+      // 草稿里的 id 可能出自 search_questions 翻到的全库结果，先进池再校验，
+      // 否则超出抽样上限的合法题会被判成「题号不可用」，模型照着假 warning 反复修补也修不好。
+      const pool = await withPickedIds(await loadAgentCandidates(constraints), parsed)
       const validated = validateSelection(parsed, constraints, pool)
       return {
         ok: !validated.warnings.length,
@@ -699,6 +701,17 @@ function createAgentTools(constraints) {
         }))
       }
     }
+  }
+}
+
+/** 候选池条目形状：validateSelection 与 agent 工具返回都用这一套字段 */
+function toAgentCandidate(r) {
+  return {
+    id: Number(r.id),
+    section: sectionOfQuestion(r),
+    difficulty: r.difficulty == null ? null : Number(r.difficulty),
+    tag: r.knowledgeTag || '',
+    text: plainForCompose(r.title)
   }
 }
 
@@ -720,13 +733,35 @@ async function loadAgentCandidates(constraints) {
     attributes: ['id', 'type', 'choiceMode', 'difficulty', 'knowledgeTag', 'title'],
     limit: AGENT_MAX_CANDIDATES
   })
-  return rows.map((r) => ({
-    id: Number(r.id),
-    section: sectionOfQuestion(r),
-    difficulty: r.difficulty == null ? null : Number(r.difficulty),
-    tag: r.knowledgeTag || '',
-    text: plainForCompose(r.title)
-  }))
+  return rows.map(toAgentCandidate)
+}
+
+/**
+ * 把模型实际点到的题并进校验池。
+ *
+ * 候选池有 AGENT_MAX_CANDIDATES 上限，而 search_questions 搜的是全库。
+ * 题库一大于上限，模型选出的合法 id 就不在池里，validateSelection 会把它判成
+ * 「题号不可用」剔除、再从池里补齐——模型的决定被静默改掉，交付的卷子也不是它选的那份。
+ * 所以凡是模型点过名的 id 都回库查出来补进池；数量不足时的补齐仍用原抽样池。
+ */
+async function withPickedIds(pool, parsed) {
+  const known = new Set(pool.map((c) => c.id))
+  const wanted = []
+  for (const row of Array.isArray(parsed?.sections) ? parsed.sections : []) {
+    for (const rawId of Array.isArray(row?.ids) ? row.ids : []) {
+      const id = Number(rawId)
+      if (Number.isInteger(id) && id > 0 && !known.has(id)) {
+        known.add(id)
+        wanted.push(id)
+      }
+    }
+  }
+  if (!wanted.length) return pool
+  const rows = await Question.findAll({
+    where: { id: { [Op.in]: wanted } },
+    attributes: ['id', 'type', 'choiceMode', 'difficulty', 'knowledgeTag', 'title']
+  })
+  return pool.concat(rows.map(toAgentCandidate))
 }
 
 const AGENT_SYSTEM = [
@@ -739,8 +774,7 @@ const AGENT_SYSTEM = [
   '硬性约束：只能使用 search_questions 返回过的真实 id，禁止编造；每个分区必须凑满要求的数量，id 不能重复。',
   '最终输出格式：{"sections":[{"section":"single","ids":[1,2,3]}],"notes":"一句话说明难度与覆盖情况"}'
 ].join('\n')
-// AI 组卷入口：先做存量体检，再走 agent 循环让模型自主选题、验卷、修补。
-// 存量不足时提前返回可读提示，比让模型空转八轮更便宜也更快。
+// AI 组卷入口：刚性管线先做存量体检；智能体模式跳过体检，让它自己搜题放宽条件。
 exports.composePaper = async (req, res, next) => {
   const startedAt = Date.now()
   let targetBase = ''
@@ -750,9 +784,9 @@ exports.composePaper = async (req, res, next) => {
     const constraints = normalizeComposeRequest(req.body || {})
     if (!constraints.structure.length) return fail(res, 40000, '请先设置大题结构（题型与题量）')
 
+    // 候选池：兜底规则组卷与 meta 计数都要用。存量体检留给刚性管线（见下面 else 分支），
+    // 在这里拦一道会把 agent 模式「候选不足就放宽条件自己找题」的能力直接挡死。
     const candidates = await loadCandidates(constraints)
-    const shortage = checkStock(constraints, candidates)
-    if (shortage) return fail(res, 40000, shortage)
 
     let warnings = []
     let notes = ''
@@ -815,7 +849,11 @@ exports.composePaper = async (req, res, next) => {
         })
 
         const parsedAgent = parseAiJson(agent.content, null)
-        const validated = parsedAgent ? validateSelection(parsedAgent, constraints, pool) : null
+        agentSteps = agent.steps
+        agentToolCalls = agent.toolCallCount
+        const validated = parsedAgent
+          ? validateSelection(parsedAgent, constraints, await withPickedIds(pool, parsedAgent))
+          : null
         if (validated) {
           sections = validated.sections
           warnings = warnings.concat(validated.warnings)
