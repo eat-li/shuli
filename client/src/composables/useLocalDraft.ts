@@ -33,6 +33,9 @@ export function useLocalDraft<T>(options: DraftOptions<T>) {
   let started = false
   let last = ''
   let applying = false
+  // 有待落盘的改动时记下它属于哪条草稿：stop() 据此决定要不要补写，
+  // clear()（保存成功）据此把这次补写作废。
+  let pendingKey = ''
 
   // 当前记录的存储键。key() 返回 null（数据未就绪）时返回空串，所有读写都据此跳过。
   const storageKey = () => {
@@ -60,7 +63,13 @@ export function useLocalDraft<T>(options: DraftOptions<T>) {
   const clear = (keyOverride?: string) => {
     const key = keyOverride ? PREFIX + keyOverride : storageKey()
     if (key) localStorage.removeItem(key)
-    if (!keyOverride) savedAt.value = null
+    if (!keyOverride) {
+      // 保存成功后调用方会 clear：此时排在队里的防抖写入必须一并取消，
+      // 否则 800ms 后它会把刚存进库的内容又写回草稿，下次打开白弹一次「恢复草稿」。
+      window.clearTimeout(timer)
+      pendingKey = ''
+      savedAt.value = null
+    }
   }
 
   // 真正落盘：内容与上次一致就不写，避免光标每动一次都碰 localStorage。
@@ -69,6 +78,7 @@ export function useLocalDraft<T>(options: DraftOptions<T>) {
     if (!started || applying) return
     const key = storageKey()
     if (!key) return
+    pendingKey = ''
     const data = options.snapshot()
     if (options.isEmpty?.(data)) {
       clear()
@@ -91,6 +101,7 @@ export function useLocalDraft<T>(options: DraftOptions<T>) {
   const schedule = () => {
     if (!started) return
     window.clearTimeout(timer)
+    pendingKey = storageKey()
     timer = window.setTimeout(write, options.delay ?? 800)
   }
 
@@ -101,10 +112,15 @@ export function useLocalDraft<T>(options: DraftOptions<T>) {
     savedAt.value = peek()?.savedAt ?? null
   }
 
-  // 停止监听并清掉待执行的写入，切换记录或卸载时调用。
+  // 停止监听：切换记录或卸载时调用。
+  // 先补一次还没到点的防抖写入再停：草稿存在的意义就是「误关不丢内容」，
+  // 而只 clearTimeout 的话，最后 800ms 内的输入整段蒸发——恰好是最常见的收尾动作
+  // （打完最后一行直接关窗）。key 变了说明切到别的记录，那份改动不该写到新记录名下。
   const stop = () => {
-    started = false
     window.clearTimeout(timer)
+    if (started && pendingKey && pendingKey === storageKey()) write()
+    pendingKey = ''
+    started = false
   }
 
   /** 恢复指定/现有草稿；恢复期间不触发自动保存 */
