@@ -83,6 +83,21 @@ export async function downloadFile(
     ElMessage.error(t('api.downloadFailed'))
     throw err
   }
+  // 业务失败不是 HTTP 错误，而是 200 + JSON 包络（utils/response.js 的 fail）：
+  // 资料库打包下载在「没选文件」「超过单次上限」「记录不存在」三条分支都走这条路。
+  // 不看 Content-Type 就直接落盘，用户拿到的是一个内容是报错 JSON 的 resources.zip，
+  // 界面还弹「下载成功」，真实原因被彻底吞掉。
+  if (/json|text/i.test(res.data.type || '')) {
+    let message = t('api.downloadFailed')
+    try {
+      const envelope = JSON.parse(await res.data.text())
+      if (envelope?.message) message = envelope.message
+    } catch {
+      /* 非 JSON 的文本响应，保留默认文案 */
+    }
+    ElMessage.error(message)
+    throw createApiError(message)
+  }
   const disposition = res.headers['content-disposition'] || ''
   // filename* 是 RFC 5987 的 UTF-8 写法（中文文件名走这个），优先于普通 filename=
   const encoded = /filename\*=UTF-8''([^;]+)/i.exec(disposition)?.[1]

@@ -19,10 +19,15 @@ export interface RestoreResult {
 }
 
 // 整包恢复：上传备份 ZIP，后端按依赖顺序恢复全部数据
+// 超时单独放宽：默认 10s 是普通 CRUD 的口径，而恢复要把整个 ZIP（含题目图片）
+// 解开再逐表 upsert。前端 10s 报「恢复失败」时后端其实还在写库，
+// 老师重试就是第二次恢复——这种「看着失败其实成功」的操作必须给足时间。
 export const restoreBackup = (file: File): Promise<RestoreResult> => {
   const formData = new FormData()
   formData.append('file', file)
-  return request.post('/backup/restore', formData) as unknown as Promise<RestoreResult>
+  return request.post('/backup/restore', formData, {
+    timeout: 300000
+  }) as unknown as Promise<RestoreResult>
 }
 
 /** 备份提醒状态（每次下载备份后由后端自动记录时间，前端据此提醒） */
