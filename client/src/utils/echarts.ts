@@ -7,6 +7,7 @@ import {
   TooltipComponent,
   LegendComponent,
   GridComponent,
+  MarkLineComponent,
   RadarComponent
 } from 'echarts/components'
 import { CanvasRenderer } from 'echarts/renderers'
@@ -20,6 +21,9 @@ echarts.use([
   TooltipComponent,
   LegendComponent,
   GridComponent,
+  // 树摇构建下 markLine 是独立组件：不注册的话 series 里的 markLine 配置
+  // 被静默忽略，不报错也不画——成绩趋势图那条平均参考线就是这么没的。
+  MarkLineComponent,
   // 雷达图需要 RadarComponent（坐标系），漏了会是空白画布且不报错
   RadarComponent,
   CanvasRenderer
