@@ -365,3 +365,32 @@ withDb('开放聚合缓存：写入后立即失效，不会读到旧统计', asy
     '新二级知识点不应被旧缓存挡住'
   )
 })
+
+withDb('删图的引用计数包含讲义正文', async () => {
+  const url = '/uploads/figure-ref-test.png'
+  const fig = await ctx.request('POST', '/api/figures', {
+    token,
+    body: { title: '引用计数测试图', url }
+  })
+  assert.equal(fig.body.code, 0, fig.body.message)
+
+  // 讲义改成文档式编辑后，正文里插的就是同一个图片地址。
+  // 引用计数少查这一处，「确认删除并删文件」就会把讲义里的图静默弄裂。
+  const handout = await ctx.request('POST', '/api/handouts', {
+    token,
+    body: { title: '引用计数测试讲义', content: `<p><img src="${url}" /></p>` }
+  })
+  assert.equal(handout.body.code, 0, handout.body.message)
+
+  const del = await ctx.request('DELETE', `/api/figures/${fig.body.data.id}?with_file=1`, { token })
+  assert.equal(del.body.code, 0, del.body.message)
+  assert.equal(del.body.data.needConfirm, true, '讲义引用了这张图，删除前必须确认')
+  assert.ok(
+    Number(del.body.data.refs) >= 1,
+    `refs 应把讲义引用算进来，实际拿到 ${del.body.data.refs}`
+  )
+
+  // 不带 with_file 只删记录，不碰存储文件
+  const soft = await ctx.request('DELETE', `/api/figures/${fig.body.data.id}`, { token })
+  assert.equal(soft.body.code, 0, soft.body.message)
+})

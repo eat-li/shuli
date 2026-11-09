@@ -1,6 +1,6 @@
 // 图形库控制器：只管理图片元数据（文件本体走 POST /upload，交给存储层落盘）
 const { Op } = require('sequelize')
-const { Figure, Question, Conclusion } = require('../models')
+const { Figure, Question, Conclusion, Handout } = require('../models')
 const storage = require('../storage')
 const { ok, fail } = require('../utils/response')
 
@@ -81,23 +81,26 @@ exports.update = async (req, res, next) => {
   }
 }
 
-// 统计这张图被多少处内容引用：富文本里插入的是 OSS 地址（题干/补充说明/答案解析/结论正文）
+// 统计这张图被多少处内容引用：富文本里插入的是图片地址，凡是富文本字段都算。
+// 讲义正文（Handout.content）不能漏——它是文档式编辑，插图方式和题目一样，
+// 少查一处就等于删除确认少报引用，确认后连文件一起删掉，讲义里当场裂图。
 async function countReferences(url) {
   if (!url) return 0
   const like = { [Op.like]: `%${url}%` }
-  const [questionCount, conclusionCount] = await Promise.all([
+  const [questionCount, conclusionCount, handoutCount] = await Promise.all([
     Question.count({
       where: { [Op.or]: [{ title: like }, { body: like }, { answer: like }] }
     }),
-    Conclusion.count({ where: { content: like } })
+    Conclusion.count({ where: { content: like } }),
+    Handout.count({ where: { content: like } })
   ])
-  return Number(questionCount || 0) + Number(conclusionCount || 0)
+  return Number(questionCount || 0) + Number(conclusionCount || 0) + Number(handoutCount || 0)
 }
 
 /**
  * 删除图形库记录。
  * 默认只删记录、保留 OSS 文件；带 with_file=1 时连 OSS 文件一起删。
- * 若这张图已被结论/题目引用，会先返回 { needConfirm: true, refs } 让前端确认，
+ * 若这张图已被题目/结论/讲义引用，会先返回 { needConfirm: true, refs } 让前端确认，
  * 确认后带 force=1 再调一次才真正删文件。
  */
 exports.remove = async (req, res, next) => {
