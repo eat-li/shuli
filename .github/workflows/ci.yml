@@ -29,6 +29,14 @@ jobs:
       - name: Lint
         run: pnpm lint
 
+      # 格式和 i18n 键树都在本地能查，不进 CI 就等于没有约束：
+      # 这次清理格式时发现 30 个文件早就漂出 Prettier 之外了，一路没人拦。
+      - name: Format check
+        run: pnpm format:check
+
+      - name: i18n check
+        run: pnpm --filter ./client i18n:check
+
       - name: Test
         run: pnpm test
 
