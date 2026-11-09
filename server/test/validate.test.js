@@ -38,7 +38,13 @@ test('必填文本字段显式传 null 报错，不会被当成 "null" 题干', 
 })
 
 test('空串也归一为 null（空值的唯一表示是 NULL）', () => {
-  const res = parseQuestion({ title: 'a', knowledgeTag: '', knowledgeSubTag: '   ', body: '', answer: '' })
+  const res = parseQuestion({
+    title: 'a',
+    knowledgeTag: '',
+    knowledgeSubTag: '   ',
+    body: '',
+    answer: ''
+  })
   assert.equal(res.error, null)
   assert.deepEqual(res.values, {
     title: 'a',

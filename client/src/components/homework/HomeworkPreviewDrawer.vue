@@ -32,7 +32,13 @@
           <div v-if="q.options && q.options.length" class="hw-q__opts">
             <div v-for="(opt, j) in q.options" :key="j" class="hw-q__opt">
               {{ String.fromCharCode(65 + j) }}.
-              {{ typeof opt === 'string' ? opt : (opt && typeof opt === 'object' && 'text' in opt ? opt.text : JSON.stringify(opt)) }}
+              {{
+                typeof opt === 'string'
+                  ? opt
+                  : opt && typeof opt === 'object' && 'text' in opt
+                    ? opt.text
+                    : JSON.stringify(opt)
+              }}
             </div>
           </div>
           <div v-if="q.body" class="hw-q__body"><RichContent :html="q.body" /></div>

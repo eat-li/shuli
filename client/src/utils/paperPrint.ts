@@ -26,10 +26,7 @@ const waitLayoutReady = (win: Window): Promise<unknown> => {
           img.addEventListener('error', () => resolve(), { once: true })
         })
   )
-  return Promise.race([
-    Promise.all([fonts, ...images]),
-    new Promise((r) => setTimeout(r, 6000))
-  ])
+  return Promise.race([Promise.all([fonts, ...images]), new Promise((r) => setTimeout(r, 6000))])
 }
 
 interface PaginateOptions {

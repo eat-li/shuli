@@ -115,8 +115,7 @@ const streamPhase = ref<'connecting' | 'connected'>('connecting')
 // 不显示进度的话界面看着就像卡死
 const thinkChars = ref(0)
 const streamHint = computed(() => {
-  if (thinkChars.value)
-    return t('ai.stream.thinking', { chars: thinkChars.value })
+  if (thinkChars.value) return t('ai.stream.thinking', { chars: thinkChars.value })
   if (streamChars.value) return t('ai.stream.received', { chars: streamChars.value })
   if (streamPhase.value === 'connected') return t('ai.stream.connected')
   return t('ai.stream.connecting')
@@ -285,14 +284,10 @@ const generate = async () => {
     } else {
       // 没有内容时把后端给出的真实原因显示出来（限流 / 地址不通 / 模型报错），
       // 不再统一含糊成「生成失败，请稍后重试」
-      ElMessageBox.alert(
-        e?.message || t('ai.conclusion.failAlert'),
-        t('ai.conclusion.failTitle'),
-        {
-          confirmButtonText: t('ai.config.gotIt'),
-          type: 'error'
-        }
-      ).catch(() => {})
+      ElMessageBox.alert(e?.message || t('ai.conclusion.failAlert'), t('ai.conclusion.failTitle'), {
+        confirmButtonText: t('ai.config.gotIt'),
+        type: 'error'
+      }).catch(() => {})
     }
   } finally {
     clearWaitTimer()

@@ -170,7 +170,13 @@
         <template v-if="Array.isArray(currentQuestion.options)">
           <div v-for="(opt, i) in currentQuestion.options" :key="i" class="q-option">
             {{ String.fromCharCode(65 + i) }}.
-            {{ typeof opt === 'string' ? opt : (opt && typeof opt === 'object' && 'text' in opt ? opt.text : JSON.stringify(opt)) }}
+            {{
+              typeof opt === 'string'
+                ? opt
+                : opt && typeof opt === 'object' && 'text' in opt
+                  ? opt.text
+                  : JSON.stringify(opt)
+            }}
           </div>
         </template>
         <div v-else>{{ JSON.stringify(currentQuestion.options) }}</div>

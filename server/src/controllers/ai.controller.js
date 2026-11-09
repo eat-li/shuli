@@ -548,7 +548,12 @@ const AGENT_TOOLS = [
             description: '题型分区：single 单选、multiple 多选、fill 填空、solve 解答'
           },
           knowledgeTag: { type: 'string', description: '按知识点精确匹配，留空表示不限' },
-          difficulty: { type: 'integer', minimum: 1, maximum: 5, description: '按难度(1-5)筛选，留空不限' },
+          difficulty: {
+            type: 'integer',
+            minimum: 1,
+            maximum: 5,
+            description: '按难度(1-5)筛选，留空不限'
+          },
           keyword: { type: 'string', description: '题干关键词模糊匹配' },
           limit: { type: 'integer', minimum: 1, maximum: 50, description: '返回条数，默认 20' },
           offset: { type: 'integer', minimum: 0, description: '分页偏移，默认 0' }
@@ -585,7 +590,11 @@ const AGENT_TOOLS = [
               type: 'object',
               properties: {
                 section: { type: 'string', enum: ['single', 'multiple', 'fill', 'solve'] },
-                ids: { type: 'array', items: { type: 'integer' }, description: '该分区的题目 id 列表' }
+                ids: {
+                  type: 'array',
+                  items: { type: 'integer' },
+                  description: '该分区的题目 id 列表'
+                }
               },
               required: ['section', 'ids']
             }
@@ -606,11 +615,16 @@ function createAgentTools(constraints) {
       const where = {}
       if (args.section) Object.assign(where, sectionWhere(String(args.section)))
       if (args.knowledgeTag) where.knowledgeTag = String(args.knowledgeTag)
-      if (args.difficulty != null && args.difficulty !== '') where.difficulty = Number(args.difficulty)
+      if (args.difficulty != null && args.difficulty !== '')
+        where.difficulty = Number(args.difficulty)
       if (args.keyword) where.title = { [Op.like]: `%${String(args.keyword).slice(0, 50)}%` }
       if (constraints.excludeUsed) {
         // 与 loadCandidates 相同的排除逻辑：作业里出现过的题不再选
-        const usedRows = await HomeworkQuestion.findAll({ attributes: ['questionId'], raw: true, group: ['questionId'] })
+        const usedRows = await HomeworkQuestion.findAll({
+          attributes: ['questionId'],
+          raw: true,
+          group: ['questionId']
+        })
         const usedIds = usedRows.map((r) => Number(r.questionId)).filter((n) => n > 0)
         if (usedIds.length) where.id = { [Op.notIn]: usedIds }
       }
@@ -639,7 +653,11 @@ function createAgentTools(constraints) {
     async get_question_stats(args) {
       const base = {}
       if (constraints.excludeUsed) {
-        const usedRows = await HomeworkQuestion.findAll({ attributes: ['questionId'], raw: true, group: ['questionId'] })
+        const usedRows = await HomeworkQuestion.findAll({
+          attributes: ['questionId'],
+          raw: true,
+          group: ['questionId']
+        })
         const usedIds = usedRows.map((r) => Number(r.questionId)).filter((n) => n > 0)
         if (usedIds.length) base.id = { [Op.notIn]: usedIds }
       }
@@ -674,7 +692,11 @@ function createAgentTools(constraints) {
         ok: !validated.warnings.length,
         warnings: validated.warnings,
         notes: validated.notes || '',
-        sections: validated.sections.map((s) => ({ section: s.section, count: s.ids.length, ids: s.ids }))
+        sections: validated.sections.map((s) => ({
+          section: s.section,
+          count: s.ids.length,
+          ids: s.ids
+        }))
       }
     }
   }
@@ -685,7 +707,11 @@ async function loadAgentCandidates(constraints) {
   const base = {}
   if (constraints.knowledgeTags.length) base.knowledgeTag = { [Op.in]: constraints.knowledgeTags }
   if (constraints.excludeUsed) {
-    const usedRows = await HomeworkQuestion.findAll({ attributes: ['questionId'], raw: true, group: ['questionId'] })
+    const usedRows = await HomeworkQuestion.findAll({
+      attributes: ['questionId'],
+      raw: true,
+      group: ['questionId']
+    })
     const usedIds = usedRows.map((r) => Number(r.questionId)).filter((n) => n > 0)
     if (usedIds.length) base.id = { [Op.notIn]: usedIds }
   }
@@ -711,7 +737,8 @@ const AGENT_SYSTEM = [
   '3. 凑齐草稿后调用 validate_paper 校验，若有 warning（数量不足/id 无效/重复）则继续搜题修补，直到 ok 为 true；',
   '4. 最后输出最终答案：只输出 JSON，不要解释文字、不要 Markdown 代码块。',
   '硬性约束：只能使用 search_questions 返回过的真实 id，禁止编造；每个分区必须凑满要求的数量，id 不能重复。',
-  '最终输出格式：{"sections":[{"section":"single","ids":[1,2,3]}],"notes":"一句话说明难度与覆盖情况"}'].join('\n')
+  '最终输出格式：{"sections":[{"section":"single","ids":[1,2,3]}],"notes":"一句话说明难度与覆盖情况"}'
+].join('\n')
 // AI 组卷入口：先做存量体检，再走 agent 循环让模型自主选题、验卷、修补。
 // 存量不足时提前返回可读提示，比让模型空转八轮更便宜也更快。
 exports.composePaper = async (req, res, next) => {
@@ -749,7 +776,8 @@ exports.composePaper = async (req, res, next) => {
           `满分：${constraints.totalScore} 分；考试时长：${constraints.duration} 分钟`,
           '大题结构：',
           ...constraints.structure.map(
-            (i) => `- ${SECTION_LABEL[i.section]}（section=${i.section}）：${i.count} 道，每题 ${i.score} 分`
+            (i) =>
+              `- ${SECTION_LABEL[i.section]}（section=${i.section}）：${i.count} 道，每题 ${i.score} 分`
           ),
           constraints.knowledgeTags.length
             ? `限定知识点：${constraints.knowledgeTags.join('、')}`
@@ -794,7 +822,9 @@ exports.composePaper = async (req, res, next) => {
           notes = validated.notes
         } else {
           degraded = true
-          warnings.push(`智能体未给出可用的选题（${agent.steps} 轮，${agent.toolCallCount} 次工具调用），已按规则组卷`)
+          warnings.push(
+            `智能体未给出可用的选题（${agent.steps} 轮，${agent.toolCallCount} 次工具调用），已按规则组卷`
+          )
         }
       } catch (e) {
         degraded = true
@@ -862,7 +892,10 @@ exports.composePaper = async (req, res, next) => {
     // 回填完整题目数据：前端要直接渲染与排版，不该再发一轮请求
     const ids = sections.flatMap((s) => s.ids)
     const rows = ids.length
-      ? await Question.findAll({ where: { id: { [Op.in]: ids } }, attributes: COMPOSE_QUESTION_FIELDS })
+      ? await Question.findAll({
+          where: { id: { [Op.in]: ids } },
+          attributes: COMPOSE_QUESTION_FIELDS
+        })
       : []
     const rowMap = new Map(rows.map((r) => [Number(r.id), r]))
     sections = sections.map((s) => ({
@@ -930,13 +963,26 @@ exports.judgeDifficulty = async (req, res, next) => {
     if (!parsed) {
       // 首次解析失败重试一次：temperature 归零压格式漂移（与组卷同策略）。
       // 同时把原始输出打到服务端日志——失败样本是修解析器的唯一依据。
-      console.warn('[ai] 判难度解析失败，原始输出：', JSON.stringify(String(raw || '').slice(0, 300)), 'model=', target.model)
+      console.warn(
+        '[ai] 判难度解析失败，原始输出：',
+        JSON.stringify(String(raw || '').slice(0, 300)),
+        'model=',
+        target.model
+      )
       raw = await callJudge(0)
       parsed = parseDifficultyResult(raw)
     }
     if (!parsed) {
       // 附上模型实际回了什么（截 60 字），否则「换一个模型」只能是瞎猜
-      return fail(res, 50200, `模型没有返回可用的难度，请重试或换一个模型（模型输出：${String(raw || '').trim().slice(0, 60) || '（空）'}）`)
+      return fail(
+        res,
+        50200,
+        `模型没有返回可用的难度，请重试或换一个模型（模型输出：${
+          String(raw || '')
+            .trim()
+            .slice(0, 60) || '（空）'
+        }）`
+      )
     }
 
     ok(res, {

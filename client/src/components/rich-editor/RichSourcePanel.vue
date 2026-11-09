@@ -3,13 +3,7 @@
     <header class="re-source__head">
       <span class="re-source__title">{{ t('editor.source.title') }}</span>
       <span class="re-source__hint">{{ t('editor.source.readonly') }}</span>
-      <el-button
-        v-if="html"
-        class="re-source__copy"
-        size="small"
-        text
-        @click="copy"
-      >
+      <el-button v-if="html" class="re-source__copy" size="small" text @click="copy">
         {{ copied ? t('editor.source.copied') : t('editor.source.copy') }}
       </el-button>
     </header>

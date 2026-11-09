@@ -13,7 +13,9 @@ test('一轮直达：模型不调工具，直接返回最终答案', async () =>
       chatCalls++
       return { role: 'assistant', content: '{"sections":[]}' }
     },
-    runTool: async () => { throw new Error('不应调用工具') }
+    runTool: async () => {
+      throw new Error('不应调用工具')
+    }
   })
   assert.strictEqual(chatCalls, 1)
   assert.strictEqual(result.steps, 1)
@@ -23,8 +25,16 @@ test('一轮直达：模型不调工具，直接返回最终答案', async () =>
 
 test('多轮工具调用：搜题→验卷→最终答案，工具结果回填成对', async () => {
   const script = [
-    { content: '', tool_calls: [{ id: 'c1', function: { name: 'search_questions', arguments: '{"section":"single"}' } }] },
-    { content: '', tool_calls: [{ id: 'c2', function: { name: 'validate_paper', arguments: '{"sections":[]}' } }] },
+    {
+      content: '',
+      tool_calls: [
+        { id: 'c1', function: { name: 'search_questions', arguments: '{"section":"single"}' } }
+      ]
+    },
+    {
+      content: '',
+      tool_calls: [{ id: 'c2', function: { name: 'validate_paper', arguments: '{"sections":[]}' } }]
+    },
     { content: 'FINAL', tool_calls: [] }
   ]
   let step = 0
@@ -66,7 +76,9 @@ test('工具抛错：错误以 JSON 回给模型而不是中断循环', async ()
     user: 'U',
     tools: [],
     chatMessage: async () => script[step++],
-    runTool: async () => { throw new Error('数据库炸了') }
+    runTool: async () => {
+      throw new Error('数据库炸了')
+    }
   })
   assert.strictEqual(result.content, 'done')
   assert.strictEqual(result.toolCallCount, 1)
@@ -81,7 +93,10 @@ test('步数上限：模型一直要求工具也不超过 maxSteps', async () =>
     maxSteps: 3,
     chatMessage: async () => {
       chatCalls++
-      return { content: '', tool_calls: [{ id: 'x' + chatCalls, function: { name: 't', arguments: '{}' } }] }
+      return {
+        content: '',
+        tool_calls: [{ id: 'x' + chatCalls, function: { name: 't', arguments: '{}' } }]
+      }
     },
     runTool: async () => ({ ok: true })
   })

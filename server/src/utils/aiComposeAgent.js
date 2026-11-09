@@ -16,7 +16,14 @@ const MAX_AGENT_STEPS = 8
 // 组卷智能体的主循环：模型可以多轮调用工具（搜题 / 统计 / 验卷），每轮结果回填后继续推理。
 // maxSteps 是硬止损——不设上限时，模型「再搜一次」的倾向会让一次组卷烧掉几十次请求。
 // 本函数不接触 DB 与 req/res，chatMessage 与 runTool 由调用方注入，因此可以被单测完整覆盖。
-async function runAgentLoop({ system, user, tools, chatMessage, runTool, maxSteps = MAX_AGENT_STEPS }) {
+async function runAgentLoop({
+  system,
+  user,
+  tools,
+  chatMessage,
+  runTool,
+  maxSteps = MAX_AGENT_STEPS
+}) {
   const messages = [
     { role: 'system', content: system },
     { role: 'user', content: user }

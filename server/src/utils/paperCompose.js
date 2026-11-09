@@ -51,12 +51,20 @@ function normalizeComposeRequest(body = {}) {
   const totalCount = structure.reduce((s, i) => s + i.count, 0)
   return {
     stage: String(body.stage || 'senior3'),
-    totalScore: clampInt(body.totalScore, 0, 750, structure.reduce((s, i) => s + i.count * i.score, 0)),
+    totalScore: clampInt(
+      body.totalScore,
+      0,
+      750,
+      structure.reduce((s, i) => s + i.count * i.score, 0)
+    ),
     duration: clampInt(body.duration, 1, 600, 120),
     structure,
     totalCount,
     knowledgeTags: Array.isArray(body.knowledgeTags)
-      ? body.knowledgeTags.map((t) => String(t)).filter(Boolean).slice(0, 20)
+      ? body.knowledgeTags
+          .map((t) => String(t))
+          .filter(Boolean)
+          .slice(0, 20)
       : [],
     excludeUsed: Boolean(body.excludeUsed)
   }
@@ -225,7 +233,11 @@ function validateSelection(parsed, constraints, candidates) {
     })
   }
 
-  return { sections: result, warnings, notes: typeof parsed?.notes === 'string' ? parsed.notes : '' }
+  return {
+    sections: result,
+    warnings,
+    notes: typeof parsed?.notes === 'string' ? parsed.notes : ''
+  }
 }
 
 /** 按「难度升序 + 知识点轮转」补齐：先保证难度不要全堆在 3 星，再避免同一知识点连排 */

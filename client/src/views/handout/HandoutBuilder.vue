@@ -417,12 +417,15 @@ const buildQuestionHtml = (q: Question, no: number, withAnswer: boolean, withMet
   const opts = Array.isArray(q.options) ? q.options : []
   if (opts.length) {
     const lines = opts
-      .map(
-        (o: any, j: number) => {
-          const text = typeof o === 'string' ? o : (o && typeof o === 'object' && 'text' in o ? o.text : JSON.stringify(o))
-          return `${String.fromCharCode(65 + j)}. ${escapeHtml(text)}`
-        }
-      )
+      .map((o: any, j: number) => {
+        const text =
+          typeof o === 'string'
+            ? o
+            : o && typeof o === 'object' && 'text' in o
+              ? o.text
+              : JSON.stringify(o)
+        return `${String.fromCharCode(65 + j)}. ${escapeHtml(text)}`
+      })
       .join('<br>')
     parts.push(`<p>${lines}</p>`)
   }

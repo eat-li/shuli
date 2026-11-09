@@ -5,7 +5,13 @@
 // 块数组交给 utils/paperPrint.ts 去测量与分页。
 import { escapeHtml, questionOptionTexts } from './format'
 import { sanitizeHtml } from './sanitizeHtml'
-import { fmtScore, sectionTitle, VOLUME_LABEL, type PaperLayout, type LaidOutSection } from './paperLayout'
+import {
+  fmtScore,
+  sectionTitle,
+  VOLUME_LABEL,
+  type PaperLayout,
+  type LaidOutSection
+} from './paperLayout'
 import type { PaperSectionKey } from './paperLayout'
 
 export interface PaperBlock {
@@ -101,15 +107,20 @@ const renderNotice = (meta: PaperMetaInput): string => {
 
 /** 第Ⅰ卷 / 第Ⅱ卷 标题，带本卷总分 */
 const renderVolume = (volume: 1 | 2, sections: LaidOutSection[]): string => {
-  const total = sections.filter((s) => s.volume === volume).reduce((sum, s) => sum + s.totalScore, 0)
+  const total = sections
+    .filter((s) => s.volume === volume)
+    .reduce((sum, s) => sum + s.totalScore, 0)
   return `<div class="paper-volume">${VOLUME_LABEL[volume]}（共 ${fmtScore(total)} 分）</div>`
 }
 
-const renderQuestion = (item: { no: number; score: number; gapPx: number; question: any }, opts: {
-  showScoreTag: boolean
-  optionColumns?: 1 | 2
-  section: PaperSectionKey
-}): string => {
+const renderQuestion = (
+  item: { no: number; score: number; gapPx: number; question: any },
+  opts: {
+    showScoreTag: boolean
+    optionColumns?: 1 | 2
+    section: PaperSectionKey
+  }
+): string => {
   const q = item.question || {}
   const body = q.body ? `<div class="q__extra">${sanitizeHtml(q.body)}</div>` : ''
   // 填空/解答不逐题标分：大题标题已经说明「每小题 N 分」
@@ -145,7 +156,10 @@ export function buildPaperBlocks(layout: PaperLayout, meta: PaperMetaInput): Pap
       })
       lastVolume = section.volume
     }
-    blocks.push({ html: `<div class="paper-section-title">${sectionTitle(section)}</div>`, kind: 'section' })
+    blocks.push({
+      html: `<div class="paper-section-title">${sectionTitle(section)}</div>`,
+      kind: 'section'
+    })
     for (const item of section.items) {
       blocks.push({
         html: renderQuestion(item, {

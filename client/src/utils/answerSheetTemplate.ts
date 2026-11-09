@@ -77,17 +77,12 @@ const renderFillSection = (section: LaidOutSection): string => {
 
 // 把 layout 装配成「抬头 → 信息栏 → 选择题卷 → 非选择题卷」的有序块。
 // 分卷与强制换页都靠 forceBreak 表达，具体怎么分页由打印环节决定，这里不测量高度。
-export function buildAnswerSheetBlocks(
-  layout: PaperLayout,
-  meta: PaperMetaInput
-): PaperBlock[] {
+export function buildAnswerSheetBlocks(layout: PaperLayout, meta: PaperMetaInput): PaperBlock[] {
   const blocks: PaperBlock[] = []
   blocks.push({ html: renderTitle(meta), kind: 'head' })
   blocks.push({ html: renderInfo(), kind: 'notice' })
 
-  const choiceSections = layout.sections.filter(
-    (s) => s.key === 'single' || s.key === 'multiple'
-  )
+  const choiceSections = layout.sections.filter((s) => s.key === 'single' || s.key === 'multiple')
   const writtenSections = layout.sections.filter((s) => s.key === 'fill' || s.key === 'solve')
 
   if (choiceSections.length) {

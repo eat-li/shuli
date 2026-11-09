@@ -16,7 +16,7 @@ const question = {
   title: '<p>已知 $f(x)=x^3-3x$，求 $f(x)$ 在 $[0,2]$ 上的最大值。</p>',
   options: ['A. 0', { text: 'B. 2' }, 'C. $4$', 'D. 6'],
   body: '<p>提示：先求导。</p>',
-  answer: '<p>答案：$f\'(x)=3x^2-3$，令其为 0 得 $x=\\pm 1$ ……</p>',
+  answer: "<p>答案：$f'(x)=3x^2-3$，令其为 0 得 $x=\\pm 1$ ……</p>",
   type: 'solve',
   knowledgeTag: '导数'
 }
@@ -101,7 +101,10 @@ test('备选字段名：level / 星级 / 难度 键都能取到', () => {
   assert.strictEqual(parseDifficultyResult('{"星级":5,"reason":"压轴"}')?.difficulty, 5)
   assert.strictEqual(parseDifficultyResult('{"难度":2,"reason":"代入"}')?.difficulty, 2)
   // reason 字段缺失但有 理由 字段
-  assert.strictEqual(parseDifficultyResult('{"difficulty":1,"理由":"直接代入"}')?.reason, '直接代入')
+  assert.strictEqual(
+    parseDifficultyResult('{"difficulty":1,"理由":"直接代入"}')?.reason,
+    '直接代入'
+  )
 })
 
 test('思考链包裹：think 标签里的数字不干扰「难度：N」识别', () => {

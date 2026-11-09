@@ -217,10 +217,7 @@ const buildHomeworkHtml = (overrides: Partial<ExportLayout> = {}) => {
   const lh = L.lineHeight
   const title = props.homework?.title || t('homeworkDialogs.export.defaultTitle')
   const questions = props.questions
-  const total = questions.reduce(
-    (s: number) => s + (L.showScore ? L.scorePerQuestion : 0),
-    0
-  )
+  const total = questions.reduce((s: number) => s + (L.showScore ? L.scorePerQuestion : 0), 0)
 
   // 自定义配色：未设置时沿用经典白底黑字；深色背景需同步传浅色文字
   const dark = !!L.textColor && L.textColor !== '#222222' && L.textColor !== '#222'
@@ -251,12 +248,15 @@ const buildHomeworkHtml = (overrides: Partial<ExportLayout> = {}) => {
         const opts =
           q.options && Array.isArray(q.options)
             ? `<div style="margin:6px 0 0 22px;">${q.options
-                .map(
-                  (o: any, j: number) => {
-                    const text = typeof o === 'string' ? o : (o && typeof o === 'object' && 'text' in o ? o.text : JSON.stringify(o))
-                    return `<div style="margin:2px 0;">${String.fromCharCode(65 + j)}. ${escapeHtml(text)}</div>`
-                  }
-                )
+                .map((o: any, j: number) => {
+                  const text =
+                    typeof o === 'string'
+                      ? o
+                      : o && typeof o === 'object' && 'text' in o
+                        ? o.text
+                        : JSON.stringify(o)
+                  return `<div style="margin:2px 0;">${String.fromCharCode(65 + j)}. ${escapeHtml(text)}</div>`
+                })
                 .join('')}</div>`
             : ''
         return `

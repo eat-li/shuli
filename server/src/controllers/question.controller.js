@@ -1,6 +1,12 @@
 // 题库控制器
 const { Op } = require('sequelize')
-const { sequelize, Question, HomeworkQuestion, KnowledgeSubLevel, PaperQuestion } = require('../models')
+const {
+  sequelize,
+  Question,
+  HomeworkQuestion,
+  KnowledgeSubLevel,
+  PaperQuestion
+} = require('../models')
 const { ok, fail } = require('../utils/response')
 const { cacheGet, cacheSet, cacheDel, cacheDelByPrefix } = require('../utils/cache')
 // 字段规则集中在 utils/schemas.js：本文件不再自己维护 pick/validate，
@@ -109,8 +115,7 @@ exports.list = async (req, res, next) => {
     // 因此 single 要同时命中 NULL，否则老师筛「单选」会凭空少掉 319 道老题。
     if (choiceMode) {
       where.type = 'choice'
-      where.choiceMode =
-        choiceMode === 'multiple' ? 'multiple' : { [Op.or]: [null, 'single'] }
+      where.choiceMode = choiceMode === 'multiple' ? 'multiple' : { [Op.or]: [null, 'single'] }
     }
     if (difficulty) where.difficulty = Number(difficulty)
     // 按 id 批量取（如 ids=3,7,9）：用于查看已选题目并调整顺序
@@ -204,8 +209,7 @@ exports.stats = async (req, res, next) => {
         // NULL = 未区分，按单选计（与筛选、排版的分组口径保持一致）
         if (r.choiceMode === 'multiple') item.choiceMultiple += count
         else item.choiceSingle += count
-      }
-      else if (r.type === 'fill') item.fill += count
+      } else if (r.type === 'fill') item.fill += count
       else if (r.type === 'solve') item.solve += count
 
       // 二级知识点分布（仅统计有值的；字面量 null 脏名不计入，见 tagName.js）
@@ -312,9 +316,7 @@ exports.tags = async (req, res, next) => {
       group: ['knowledgeTag'],
       order: [['knowledgeTag', 'ASC']]
     })
-    const tags = rows
-      .map((r) => r.knowledgeTag)
-      .filter((t) => Boolean(t) && !isNullLiteralTag(t))
+    const tags = rows.map((r) => r.knowledgeTag).filter((t) => Boolean(t) && !isNullLiteralTag(t))
     cacheSet(cacheKey, tags, TAGS_TTL)
     ok(res, tags)
   } catch (e) {
@@ -544,7 +546,8 @@ exports.difficultyCandidates = async (req, res, next) => {
     const choiceMode = String(req.query.choiceMode || '').trim()
     if (type) {
       where.type = type
-      if (type === 'choice' && choiceMode) where.choiceMode = choiceMode === 'multiple' ? 'multiple' : 'single'
+      if (type === 'choice' && choiceMode)
+        where.choiceMode = choiceMode === 'multiple' ? 'multiple' : 'single'
     }
 
     const [total, rows] = await Promise.all([
@@ -599,8 +602,7 @@ exports.analysis = async (req, res, next) => {
     if (type) where.type = type
     if (choiceMode) {
       where.type = 'choice'
-      where.choiceMode =
-        choiceMode === 'multiple' ? 'multiple' : { [Op.or]: [null, 'single'] }
+      where.choiceMode = choiceMode === 'multiple' ? 'multiple' : { [Op.or]: [null, 'single'] }
     }
     if (knowledgeTag === '__empty__') where.knowledgeTag = { [Op.or]: [null, ''] }
     else if (knowledgeTag) where.knowledgeTag = knowledgeTag
@@ -661,7 +663,8 @@ exports.analysis = async (req, res, next) => {
     for (const t of types) {
       for (const k of levelKeys) {
         const count = typeDiff.get(`${t}|${k}`) || 0
-        if (count) byTypeDifficulty.push({ type: t, difficulty: k === 'null' ? null : Number(k), count })
+        if (count)
+          byTypeDifficulty.push({ type: t, difficulty: k === 'null' ? null : Number(k), count })
       }
     }
 

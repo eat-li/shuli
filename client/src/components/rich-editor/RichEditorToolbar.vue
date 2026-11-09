@@ -116,7 +116,11 @@
     </el-tooltip>
     <span class="re-sep" />
     <el-tooltip :content="t('editor.toolbar.insertImage')" placement="top" :show-after="400">
-      <button type="button" :aria-label="t('editor.toolbar.insertImage')" @click="emit('pick-image')">
+      <button
+        type="button"
+        :aria-label="t('editor.toolbar.insertImage')"
+        @click="emit('pick-image')"
+      >
         <svg
           viewBox="0 0 24 24"
           fill="none"
@@ -270,9 +274,7 @@
       </button>
       <template #dropdown>
         <el-dropdown-menu>
-          <el-dropdown-item command="local">{{
-            t('editor.toolbar.aiLocal')
-          }}</el-dropdown-item>
+          <el-dropdown-item command="local">{{ t('editor.toolbar.aiLocal') }}</el-dropdown-item>
           <el-dropdown-item command="ai" divided>{{
             t('editor.toolbar.aiCloud')
           }}</el-dropdown-item>
@@ -281,11 +283,7 @@
     </el-dropdown>
     <span class="re-sep" />
     <el-tooltip :content="t('editor.toolbar.undo')" placement="top" :show-after="400">
-      <button
-        type="button"
-        :aria-label="t('editor.toolbar.undo')"
-        @click="run((c) => c.undo())"
-      >
+      <button type="button" :aria-label="t('editor.toolbar.undo')" @click="run((c) => c.undo())">
         <svg
           viewBox="0 0 24 24"
           fill="none"
@@ -300,11 +298,7 @@
       </button>
     </el-tooltip>
     <el-tooltip :content="t('editor.toolbar.redo')" placement="top" :show-after="400">
-      <button
-        type="button"
-        :aria-label="t('editor.toolbar.redo')"
-        @click="run((c) => c.redo())"
-      >
+      <button type="button" :aria-label="t('editor.toolbar.redo')" @click="run((c) => c.redo())">
         <svg
           viewBox="0 0 24 24"
           fill="none"
@@ -529,16 +523,12 @@ const insertTableByMarkdown = async () => {
 
 const insertMath = async () => {
   try {
-    const { value } = await ElMessageBox.prompt(
-      t('editor.math.prompt'),
-      t('editor.math.title'),
-      {
-        confirmButtonText: t('editor.table.insert'),
-        cancelButtonText: t('common.cancel'),
-        inputPattern: /\S+/,
-        inputErrorMessage: t('editor.math.required')
-      }
-    )
+    const { value } = await ElMessageBox.prompt(t('editor.math.prompt'), t('editor.math.title'), {
+      confirmButtonText: t('editor.table.insert'),
+      cancelButtonText: t('common.cancel'),
+      inputPattern: /\S+/,
+      inputErrorMessage: t('editor.math.required')
+    })
     props.editor.chain().focus().insertContent(`$${value}$`).run()
   } catch {
     /* 用户取消 */

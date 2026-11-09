@@ -103,8 +103,16 @@ test('ruleCompose 严格按数量出题、难度递增、跨大题不重复', ()
   const solves = out.sections[1].ids.map((id) => pool.find((c) => c.id === id).difficulty)
   assert.equal(singles.length, 3)
   assert.equal(solves.length, 2)
-  assert.deepEqual(singles, [...singles].sort((a, b) => a - b), '单选应按难度升序')
-  assert.deepEqual(solves, [...solves].sort((a, b) => a - b), '解答应按难度升序')
+  assert.deepEqual(
+    singles,
+    [...singles].sort((a, b) => a - b),
+    '单选应按难度升序'
+  )
+  assert.deepEqual(
+    solves,
+    [...solves].sort((a, b) => a - b),
+    '解答应按难度升序'
+  )
   assert.equal(new Set([...out.sections[0].ids, ...out.sections[1].ids]).size, 5)
 })
 

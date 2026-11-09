@@ -53,8 +53,7 @@ export default {
       scoreTag: '({n} pts)',
       typeTag: '[{type}]',
       publishParentPdf: 'Publish parent PDF',
-      publishHint:
-        'Questions only — no answers or scores; parents download it in the mini program',
+      publishHint: 'Questions only — no answers or scores; parents download it in the mini program',
       publishSuccess: 'PDF generated — parents can download it'
     },
     summary: {

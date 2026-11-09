@@ -66,7 +66,7 @@
         />
         <el-table-column :label="t('aiDifficulty.colOriginal')" width="90" align="center">
           <template #default="{ row }">
-            <span :class="{ 'aid__unrated': row.difficulty == null }">
+            <span :class="{ aid__unrated: row.difficulty == null }">
               {{
                 row.difficulty == null
                   ? t('aiDifficulty.unrated')
@@ -77,7 +77,7 @@
         </el-table-column>
         <el-table-column :label="t('aiDifficulty.colAi')" width="90" align="center">
           <template #default="{ row }">
-            <b v-if="row.suggested" :class="{ 'aid__changed': row.suggested !== row.difficulty }">
+            <b v-if="row.suggested" :class="{ aid__changed: row.suggested !== row.difficulty }">
               {{ t('aiDifficulty.stars', row.suggested) }}
             </b>
             <span v-else-if="row.status === 'running'" class="aid__muted">…</span>
@@ -86,7 +86,7 @@
         </el-table-column>
         <el-table-column :label="t('aiDifficulty.colReason')" min-width="200" show-overflow-tooltip>
           <template #default="{ row }">
-            <span :class="{ 'aid__error': row.status === 'error' }">{{ row.reason || '—' }}</span>
+            <span :class="{ aid__error: row.status === 'error' }">{{ row.reason || '—' }}</span>
           </template>
         </el-table-column>
       </el-table>

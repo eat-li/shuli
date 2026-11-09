@@ -29,10 +29,11 @@ test.after(async () => {
 })
 
 /** 需要数据库的用例统一用它包一层：拿不到库就跳过 */
-const withDb = (name, fn) => test(name, async (t) => {
-  if (bootError) return t.skip(bootError)
-  await fn(t)
-})
+const withDb = (name, fn) =>
+  test(name, async (t) => {
+    if (bootError) return t.skip(bootError)
+    await fn(t)
+  })
 
 withDb('健康检查无需鉴权', async () => {
   const res = await ctx.request('GET', '/api/health')
@@ -60,10 +61,17 @@ withDb('建多选题：子类型落库，且只被「多选」筛选中', async 
   assert.equal(created.body.data.choiceMode, 'multiple')
   const id = created.body.data.id
 
-  const multi = await ctx.request('GET', '/api/questions?choiceMode=multiple&page=1&pageSize=10', { token })
-  assert.ok(multi.body.data.list.some((q) => q.id === id), '多选筛选应包含刚建的题')
+  const multi = await ctx.request('GET', '/api/questions?choiceMode=multiple&page=1&pageSize=10', {
+    token
+  })
+  assert.ok(
+    multi.body.data.list.some((q) => q.id === id),
+    '多选筛选应包含刚建的题'
+  )
 
-  const single = await ctx.request('GET', '/api/questions?choiceMode=single&page=1&pageSize=10', { token })
+  const single = await ctx.request('GET', '/api/questions?choiceMode=single&page=1&pageSize=10', {
+    token
+  })
   assert.ok(!single.body.data.list.some((q) => q.id === id), '单选筛选不应包含多选题')
 })
 
@@ -185,14 +193,26 @@ withDb('判难度候选清单：按 scope 过滤，且只回轻量字段', async
   })
   assert.equal(unrated.body.data.difficulty, null)
 
-  const suspicious = await ctx.request('GET', '/api/questions/difficulty-candidates?scope=suspicious', { token })
+  const suspicious = await ctx.request(
+    'GET',
+    '/api/questions/difficulty-candidates?scope=suspicious',
+    { token }
+  )
   assert.equal(suspicious.body.code, 0)
   assert.ok(suspicious.body.data.list.some((q) => q.id === three.body.data.id))
-  assert.ok(suspicious.body.data.list.every((q) => q.difficulty === 3), 'suspicious 只应含 3 星题')
+  assert.ok(
+    suspicious.body.data.list.every((q) => q.difficulty === 3),
+    'suspicious 只应含 3 星题'
+  )
 
-  const un = await ctx.request('GET', '/api/questions/difficulty-candidates?scope=unrated', { token })
+  const un = await ctx.request('GET', '/api/questions/difficulty-candidates?scope=unrated', {
+    token
+  })
   assert.ok(un.body.data.list.some((q) => q.id === unrated.body.data.id))
-  assert.ok(un.body.data.list.every((q) => q.difficulty === null), 'unrated 只应含未标注题')
+  assert.ok(
+    un.body.data.list.every((q) => q.difficulty === null),
+    'unrated 只应含未标注题'
+  )
 
   // 轻量字段：不能把整篇题干 HTML 传回来
   const first = un.body.data.list[0]
@@ -305,7 +325,11 @@ withDb('讲义知识点区块：父分类区块包含子分类的结论', async 
 
 withDb('开放聚合缓存：写入后立即失效，不会读到旧统计', async () => {
   const tag = '缓存失效测试'
-  const before = await ctx.request('GET', `/api/questions/stats?keyword=${encodeURIComponent('缓存')}`, { token })
+  const before = await ctx.request(
+    'GET',
+    `/api/questions/stats?keyword=${encodeURIComponent('缓存')}`,
+    { token }
+  )
   const beforeTotal = before.body.data.reduce((s, r) => s + r.total, 0)
 
   await ctx.request('POST', '/api/questions', {
@@ -314,15 +338,30 @@ withDb('开放聚合缓存：写入后立即失效，不会读到旧统计', asy
   })
 
   // 写操作必须让 open:facets:* 失效，否则家长端 60s 内看到的是旧题量
-  const after = await ctx.request('GET', `/api/questions/stats?keyword=${encodeURIComponent('缓存')}`, { token })
+  const after = await ctx.request(
+    'GET',
+    `/api/questions/stats?keyword=${encodeURIComponent('缓存')}`,
+    { token }
+  )
   const afterTotal = after.body.data.reduce((s, r) => s + r.total, 0)
   assert.equal(afterTotal, beforeTotal + 1, '新增题目后统计应立即反映')
 
   // 再读一次（走缓存）结果应与上一次一致
-  const again = await ctx.request('GET', `/api/questions/stats?keyword=${encodeURIComponent('缓存')}`, { token })
+  const again = await ctx.request(
+    'GET',
+    `/api/questions/stats?keyword=${encodeURIComponent('缓存')}`,
+    { token }
+  )
   assert.deepEqual(again.body.data, after.body.data)
 
   // 二级知识点同样有缓存，且要能读到刚建的
-  const subs = await ctx.request('GET', `/api/questions/subtags?knowledgeTag=${encodeURIComponent(tag)}`, { token })
-  assert.ok(subs.body.data.some((s) => s.name === '子项'), '新二级知识点不应被旧缓存挡住')
+  const subs = await ctx.request(
+    'GET',
+    `/api/questions/subtags?knowledgeTag=${encodeURIComponent(tag)}`,
+    { token }
+  )
+  assert.ok(
+    subs.body.data.some((s) => s.name === '子项'),
+    '新二级知识点不应被旧缓存挡住'
+  )
 })

@@ -16,8 +16,7 @@ import { i18n } from './index'
 const camel = (value: string) => value.replace(/-([a-z0-9])/g, (_, c: string) => c.toUpperCase())
 
 /** 路由名 → 文案键；无名字返回空串 */
-export const pageTitleKey = (name: unknown) =>
-  name ? `page.${camel(String(name))}` : ''
+export const pageTitleKey = (name: unknown) => (name ? `page.${camel(String(name))}` : '')
 
 type TitleSource = Pick<RouteLocationNormalized, 'name' | 'params' | 'meta'>
 

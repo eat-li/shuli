@@ -1,5 +1,10 @@
 <template>
-  <el-dialog v-model="visible" :title="t('homeworkCategoryDialog.title')" width="760px" @open="load">
+  <el-dialog
+    v-model="visible"
+    :title="t('homeworkCategoryDialog.title')"
+    width="760px"
+    @open="load"
+  >
     <div class="cat-add">
       <el-input
         v-model="newName"

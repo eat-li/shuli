@@ -115,11 +115,14 @@ for (const [key, files] of [...used].sort()) {
 const camel = (v) => v.replace(/-([a-z0-9])/g, (_, c) => c.toUpperCase())
 const routeSrc = readFileSync(`${SRC}/router/index.ts`, 'utf8')
 const routeTitles = []
-for (const m of routeSrc.matchAll(/name:\s*'([^']+)'[\s\S]{0,120}?meta:\s*\{[^}]*title:\s*'([^']+)'/g)) {
+for (const m of routeSrc.matchAll(
+  /name:\s*'([^']+)'[\s\S]{0,120}?meta:\s*\{[^}]*title:\s*'([^']+)'/g
+)) {
   const [, name, title] = m
   // 登录页与只读端是独立壳层，本来就不参与后台的语言包
   if (name === 'login' || name.startsWith('readonly')) continue
-  if (!/^(layout|redirect)/.test(name)) routeTitles.push({ name, title, key: `page.${camel(name)}` })
+  if (!/^(layout|redirect)/.test(name))
+    routeTitles.push({ name, title, key: `page.${camel(name)}` })
 }
 const routeMissing = routeTitles
   .filter((r) => !zhFlat.has(r.key))
@@ -139,8 +142,7 @@ const enCjk = [...enFlat.entries()]
 // 判据看**编译产物**而不是正则：有绑定时内联成本地变量，没绑定才留下 `_ctx.xxx(`。
 // 注意先剔除注释——编译产物会保留源码注释，注释里提到 `_ctx.xxx(` 会误报。
 const { parse: parseSfc, compileScript } = req('@vue/compiler-sfc')
-const stripComments = (code) =>
-  code.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '')
+const stripComments = (code) => code.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '')
 
 const missingBindings = []
 for (const file of walk(SRC).filter((f) => f.endsWith('.vue'))) {
@@ -149,7 +151,9 @@ for (const file of walk(SRC).filter((f) => f.endsWith('.vue'))) {
   let content
   try {
     const { descriptor } = parseSfc(src, { filename: file.split(/[\\/]/).pop() })
-    content = stripComments(compileScript(descriptor, { id: 'i18n-check', inlineTemplate: true }).content)
+    content = stripComments(
+      compileScript(descriptor, { id: 'i18n-check', inlineTemplate: true }).content
+    )
   } catch (e) {
     missingBindings.push(`${file.replace(`${SRC}/`, '')}（编译失败：${e.message.slice(0, 60)}）`)
     continue
@@ -197,11 +201,11 @@ console.log(`  合计 ${cjk.reduce((s, x) => s + x.count, 0)} 行 / ${cjk.length
 
 process.exit(
   missingZh.length ||
-  missingEn.length ||
-  onlyZh.length ||
-  onlyEn.length ||
-  routeMissing.length ||
-  missingBindings.length
+    missingEn.length ||
+    onlyZh.length ||
+    onlyEn.length ||
+    routeMissing.length ||
+    missingBindings.length
     ? 1
     : 0
 )

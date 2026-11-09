@@ -126,10 +126,7 @@ const orderRank = (k: PaperSectionKey) => SECTION_ORDER.indexOf(k)
 
 // 把题目列表排版成「分区 + 连续题号 + 分值小计」的版式数据。
 // 分区内用稳定排序保持用户拖拽的相对顺序，因此这里不能改用可能不稳定的排序实现。
-export function layoutPaper(
-  items: PaperItem[],
-  options: PaperLayoutOptions = {}
-): PaperLayout {
+export function layoutPaper(items: PaperItem[], options: PaperLayoutOptions = {}): PaperLayout {
   const ratio = options.gapRatio ?? 1
   const sorted = [...items].sort((a, b) => {
     const d = orderRank(a.section) - orderRank(b.section)

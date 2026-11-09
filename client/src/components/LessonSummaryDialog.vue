@@ -250,7 +250,6 @@ const paragraphs = (text: unknown): string[] =>
     .map((s) => s.trim())
     .filter(Boolean)
 
-
 const nowDateTime = () => {
   const d = new Date()
   const p = (n: number) => String(n).padStart(2, '0')
@@ -357,15 +356,11 @@ const generate = async () => {
     } else {
       const backend = await getAiConfig()
       if (!backend.hasBackendKey) {
-        await ElMessageBox.confirm(
-          t('homeworkDialogs.summary.noAiKey'),
-          t('common.tips'),
-          {
-            confirmButtonText: t('homeworkDialogs.summary.goSettings'),
-            cancelButtonText: t('common.cancel'),
-            type: 'warning'
-          }
-        )
+        await ElMessageBox.confirm(t('homeworkDialogs.summary.noAiKey'), t('common.tips'), {
+          confirmButtonText: t('homeworkDialogs.summary.goSettings'),
+          cancelButtonText: t('common.cancel'),
+          type: 'warning'
+        })
         return
       }
       payload.baseUrl = backend.baseUrl

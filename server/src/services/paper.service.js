@@ -145,7 +145,10 @@ const sumScore = (items) => Math.round(items.reduce((s, it) => s + (Number(it.sc
 /** 建卷：卷头 + 题目清单在同一事务里落地 */
 function createPaper({ payload, items }) {
   return sequelize.transaction(async (t) => {
-    const created = await Paper.create({ ...payload, totalScore: sumScore(items) }, { transaction: t })
+    const created = await Paper.create(
+      { ...payload, totalScore: sumScore(items) },
+      { transaction: t }
+    )
     await PaperQuestion.bulkCreate(
       items.map((it) => ({ ...it, paperId: created.id })),
       { transaction: t }
@@ -231,7 +234,9 @@ async function countByPaperIds(ids) {
     group: ['paperId'],
     raw: true
   })
-  return new Map(rows.map((r) => [Number(r.paperId), { count: Number(r.c) || 0, sum: toNumber(r.s) }]))
+  return new Map(
+    rows.map((r) => [Number(r.paperId), { count: Number(r.c) || 0, sum: toNumber(r.s) }])
+  )
 }
 
 module.exports = {

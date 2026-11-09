@@ -99,8 +99,7 @@ function parseDifficultyResult(raw) {
 
   // 兜底：整段文本里只认「难度：4」「难度为三星」或孤立的一位数，
   // 避免把解析里的数字当成难度
-  const text = String(raw || '')
-    .replace(/<think>[\s\S]*?<\/think>/gi, '') // 思考链里的数字不是答案
+  const text = String(raw || '').replace(/<think>[\s\S]*?<\/think>/gi, '') // 思考链里的数字不是答案
   const CN_NUM = { 一: 1, 二: 2, 三: 3, 四: 4, 五: 5 }
   const labeled = text.match(/难度[^\d一二三四五]{0,6}([1-5])(?!\d)/)
   if (labeled) {

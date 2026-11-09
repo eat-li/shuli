@@ -34,7 +34,12 @@ const withDb = (name, fn) =>
 const mkQuestion = async ({ tag = null, sub = null } = {}) => {
   const res = await ctx.request('POST', '/api/questions', {
     token,
-    body: { title: `<p>${tag || '未分类'} / ${sub || '-'}</p>`, type: 'fill', knowledgeTag: tag, knowledgeSubTag: sub }
+    body: {
+      title: `<p>${tag || '未分类'} / ${sub || '-'}</p>`,
+      type: 'fill',
+      knowledgeTag: tag,
+      knowledgeSubTag: sub
+    }
   })
   assert.equal(res.body.code, 0, '建题应成功')
   return res.body.data.id

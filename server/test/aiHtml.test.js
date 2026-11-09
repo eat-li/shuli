@@ -47,7 +47,10 @@ test('stripUnrequestedAnswer：原文本身含「答案」字样时不删', () =
 
 test('stripUnrequestedAnswer：模型多写的整段答案解析被整段截掉', () => {
   const html = '<p>已知 $f(x)=x^2$，求 $f(2)$。</p><p>答案：4</p><p>解析：代入即可。</p>'
-  assert.equal(stripUnrequestedAnswer('已知 f(x)=x^2，求 f(2)。', html, 'stem'), '<p>已知 $f(x)=x^2$，求 $f(2)$。</p>')
+  assert.equal(
+    stripUnrequestedAnswer('已知 f(x)=x^2，求 f(2)。', html, 'stem'),
+    '<p>已知 $f(x)=x^2$，求 $f(2)$。</p>'
+  )
 })
 
 test('stripUnrequestedAnswer：同一段里跟在正文后的答案被截断，句号保留', () => {
