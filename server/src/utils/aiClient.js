@@ -120,9 +120,8 @@ async function callChat({
 }) {
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), timeoutMs)
-  let resp
   try {
-    resp = await fetch(`${base}/chat/completions`, {
+    const resp = await fetch(`${base}/chat/completions`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -136,26 +135,28 @@ async function callChat({
       }),
       signal: controller.signal
     })
+
+    if (!resp.ok) {
+      const errText = await resp.text().catch(() => '')
+      let msg = `AI 接口返回错误（HTTP ${resp.status}）`
+      try {
+        const j = JSON.parse(errText)
+        if (j?.error?.message) msg = j.error.message
+      } catch {
+        /* 保留默认信息 */
+      }
+      const err = new Error(msg)
+      err.httpStatus = 50200
+      throw err
+    }
+
+    // 读响应体也在超时范围内。以前 timer 在 fetch 一返回（只到响应头）就 clear，
+    // 上游「发完头就停摆」时 resp.json() 永远不 settle，请求整条挂死且不报错。
+    const data = await resp.json()
+    return String(data?.choices?.[0]?.message?.content || '')
   } finally {
     clearTimeout(timer)
   }
-
-  if (!resp.ok) {
-    const errText = await resp.text().catch(() => '')
-    let msg = `AI 接口返回错误（HTTP ${resp.status}）`
-    try {
-      const j = JSON.parse(errText)
-      if (j?.error?.message) msg = j.error.message
-    } catch {
-      /* 保留默认信息 */
-    }
-    const err = new Error(msg)
-    err.httpStatus = 50200
-    throw err
-  }
-
-  const data = await resp.json()
-  return String(data?.choices?.[0]?.message?.content || '')
 }
 
 // 与 callChat 同一请求体，但返回完整的 assistant message（含 tool_calls / reasoning_content），
@@ -174,7 +175,6 @@ async function callChatMessage({
 }) {
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), timeoutMs)
-  let resp
   try {
     const body = {
       model,
@@ -186,7 +186,7 @@ async function callChatMessage({
       body.tools = tools
       if (toolChoice) body.tool_choice = toolChoice
     }
-    resp = await fetch(`${base}/chat/completions`, {
+    const resp = await fetch(`${base}/chat/completions`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -195,28 +195,29 @@ async function callChatMessage({
       body: JSON.stringify(body),
       signal: controller.signal
     })
+
+    if (!resp.ok) {
+      const errText = await resp.text().catch(() => '')
+      let msg = `AI 接口返回错误（HTTP ${resp.status}）`
+      try {
+        const j = JSON.parse(errText)
+        if (j?.error?.message) msg = j.error.message
+      } catch {
+        /* 保留默认信息 */
+      }
+      const err = new Error(msg)
+      err.httpStatus = 50200
+      throw err
+    }
+
+    // 与 callChat 同理：读 body 也要在超时保护之内
+    const data = await resp.json()
+    const message = data?.choices?.[0]?.message
+    if (!message) throw Object.assign(new Error('AI 没有返回消息'), { httpStatus: 50200 })
+    return message
   } finally {
     clearTimeout(timer)
   }
-
-  if (!resp.ok) {
-    const errText = await resp.text().catch(() => '')
-    let msg = `AI 接口返回错误（HTTP ${resp.status}）`
-    try {
-      const j = JSON.parse(errText)
-      if (j?.error?.message) msg = j.error.message
-    } catch {
-      /* 保留默认信息 */
-    }
-    const err = new Error(msg)
-    err.httpStatus = 50200
-    throw err
-  }
-
-  const data = await resp.json()
-  const message = data?.choices?.[0]?.message
-  if (!message) throw Object.assign(new Error('AI 没有返回消息'), { httpStatus: 50200 })
-  return message
 }
 
 // 调用上游 /chat/completions 并开启 stream:true，逐段回调 onDelta。
@@ -260,6 +261,7 @@ async function streamChat({
 
   let text = ''
   let truncated = false
+  let reader = null
   try {
     resetIdle()
     const resp = await fetch(`${base}/chat/completions`, {
@@ -299,7 +301,7 @@ async function streamChat({
     }
 
     onStatus?.('connected')
-    const reader = resp.body.getReader()
+    reader = resp.body.getReader()
     const decoder = new TextDecoder()
     let buf = ''
     let thinkChars = 0
@@ -369,6 +371,9 @@ async function streamChat({
     clearTimeout(idleTimer)
     clearTimeout(hardTimer)
     if (signal) signal.removeEventListener('abort', onOuterAbort)
+    // 异常退出（上游返回 error 分片、中途抛错、被中止）时把流关掉。
+    // 只 abort 不 cancel reader，上游连接还会继续生成直到自己结束，白扣配额。
+    if (reader) await reader.cancel().catch(() => {})
   }
 }
 
