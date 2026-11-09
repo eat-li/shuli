@@ -25,11 +25,15 @@
           :step="10"
           controls-position="right"
         />
+        <!-- 满分不可手改：它恒等于各题分值之和。后端 paper.service.js 的 sumScore 每次
+             保存都会覆盖 totalScore，PAPER_SCHEMA 的白名单里也没有这个字段，
+             所以这里填的值提交上去就没了，重新打开还变成库里的数——是个只能骗人的输入框。 -->
         <el-input-number
           v-model="meta.totalScore"
           :min="0"
           :max="750"
           :step="10"
+          :disabled="true"
           controls-position="right"
         />
       </div>

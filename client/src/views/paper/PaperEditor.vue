@@ -8,10 +8,7 @@
         </h1>
         <span class="editor__sum">
           {{ t('paperEditor.summary', { n: layout.totalCount, m: layout.totalScore }) }}
-          <span
-            v-if="layout.totalCount && layout.totalScore !== form.totalScore"
-            class="editor__warn"
-          >
+          <span v-if="scoreMismatch" class="editor__warn">
             {{ t('paperEditor.fullScoreWarn', { n: form.totalScore }) }}
           </span>
         </span>
@@ -432,6 +429,14 @@ const syncTotalScore = () => {
   if (sum > 0) form.totalScore = Math.round(sum)
 }
 
+// 卷头满分与题分合计不一致的提示。
+// 必须两边都按同一口径取整再比：服务端存的是 Math.round(分值之和)（paper.service.js
+// 的 sumScore），而 layout.totalScore 是原始和。用 0.5 分档分值时 143.5 永远不等于 144，
+// 原来直接比会把这个警告变成常驻，真正的「卷头与题分不符」反而看不出来。
+const scoreMismatch = computed(
+  () => layout.value.totalCount > 0 && Math.round(layout.value.totalScore) !== form.totalScore
+)
+
 const save = async () => {
   // 加载失败/加载中绝不落库：此时表单是空的，保存等于清空原卷
   if (loadError.value || loading.value) return
@@ -558,7 +563,12 @@ const warnBeforeUnload = (e: BeforeUnloadEvent) => {
   e.returnValue = ''
 }
 onMounted(() => window.addEventListener('beforeunload', warnBeforeUnload))
-onBeforeUnmount(() => window.removeEventListener('beforeunload', warnBeforeUnload))
+onBeforeUnmount(() => {
+  window.removeEventListener('beforeunload', warnBeforeUnload)
+  // 预览是 400ms 防抖 + 整篇 KaTeX 重建，离开页面时不取消的话，
+  // 还会在一个已经卸载的组件上多跑一次全量排版
+  if (timer) clearTimeout(timer)
+})
 </script>
 
 <style scoped>
