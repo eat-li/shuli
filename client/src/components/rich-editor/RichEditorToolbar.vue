@@ -395,6 +395,7 @@ import { useI18n } from 'vue-i18n'
 import type { ChainedCommands, Editor } from '@tiptap/core'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { markdownTableToHtml } from '../../utils/markdownTable'
+import { escapeStrayLt } from '../../utils/sanitizeHtml'
 
 const props = defineProps<{
   editor: Editor
@@ -529,7 +530,13 @@ const insertMath = async () => {
       inputPattern: /\S+/,
       inputErrorMessage: t('editor.math.required')
     })
-    props.editor.chain().focus().insertContent(`$${value}$`).run()
+    // insertContent 的字符串一律按 HTML 解析，`x<y` 里的 `<y$` 会被当成标签开头吞掉，
+    // 插进来的公式当场缺半截。与渲染侧同一套规则：只转义不像标签的裸 <。
+    props.editor
+      .chain()
+      .focus()
+      .insertContent(escapeStrayLt(`$${value}$`))
+      .run()
   } catch {
     /* 用户取消 */
   }

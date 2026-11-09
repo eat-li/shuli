@@ -71,7 +71,7 @@ import { ElMessage, ElMessageBox, ElLoading } from 'element-plus'
 import { uploadImage } from '../api/upload'
 import { getAiConfig, formatQuestion } from '../api/ai'
 import { loadAiConfig } from '../utils/aiConfig'
-import { sanitizeRichHtml } from '../utils/sanitizeHtml'
+import { escapeStrayLt, sanitizeRichHtml } from '../utils/sanitizeHtml'
 import { markdownTableToHtml } from '../utils/markdownTable'
 import {
   normalizeMathDelimiters,
@@ -327,7 +327,10 @@ const ResizableImage = TiptapImage.extend({
 })
 
 const editor = useEditor({
-  content: props.modelValue || '',
+  // 进编辑器前先转义裸 <：库里改造前的老数据带的是没转义的小于号，ProseMirror 按 HTML
+  // 解析时会把它当成标签开头一路吞到下一个 >。浏览态走 sanitizeRichHtml 没事，
+  // 一打开编辑就少半句，再保存等于把丢字写回库——这是不可逆的。
+  content: escapeStrayLt(props.modelValue || ''),
   extensions: [
     StarterKit,
     ResizableImage,
@@ -357,7 +360,9 @@ const editor = useEditor({
       const text = event.clipboardData?.getData('text/plain')
       // 整段 LaTeX 源码（\documentclass / \begin{enumerate} / \item / \(...\) …）：
       // 编辑器只认 $...$ 与 HTML，直接粘会变成一堆源码，这里先翻译成 HTML + $ 公式
-      if (looksLikeLatex(text || '')) {
+      // 只在没有 HTML 分片时才走这条：从网页复制的图文里，plain text 常常也带着
+      // \( \) 这类片段，被误判成 LaTeX 源码就把图片和表格全丢了。
+      if (!hasHtml && looksLikeLatex(text || '')) {
         editor.value
           ?.chain()
           .focus()
@@ -420,9 +425,11 @@ insertNormalizedPaste = (text) => {
 watch(
   () => props.modelValue,
   (val) => {
-    if (editor.value && val !== editor.value.getHTML()) {
-      editor.value.commands.setContent(val || '', false)
-    }
+    if (!editor.value) return
+    // 与初始 content 同一套转义，且拿转义后的结果和 getHTML() 比：
+    // 直接比原始值会永远不相等，每次回显都多刷一次 setContent。
+    const next = escapeStrayLt(val || '')
+    if (next !== editor.value.getHTML()) editor.value.commands.setContent(next, false)
   }
 )
 
