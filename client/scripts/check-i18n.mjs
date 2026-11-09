@@ -141,7 +141,11 @@ const enCjk = [...enFlat.entries()]
 //
 // 判据看**编译产物**而不是正则：有绑定时内联成本地变量，没绑定才留下 `_ctx.xxx(`。
 // 注意先剔除注释——编译产物会保留源码注释，注释里提到 `_ctx.xxx(` 会误报。
-const { parse: parseSfc, compileScript } = req('@vue/compiler-sfc')
+// 走 vue 自带的子路径，不直接 require '@vue/compiler-sfc'：后者没在 client 里声明，
+// 只是 vue 的传递依赖。pnpm 的隔离布局下它能被解析纯属运气（本机首页目录里恰好有
+// 一份同版本包），干净环境（CI、他人机器）直接 MODULE_NOT_FOUND。
+// 用 'vue/compiler-sfc' 则一定解析得到，且版本与构建用的 vue 天然一致。
+const { parse: parseSfc, compileScript } = req('vue/compiler-sfc')
 const stripComments = (code) => code.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '')
 
 const missingBindings = []
