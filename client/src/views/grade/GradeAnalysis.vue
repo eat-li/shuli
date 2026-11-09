@@ -127,6 +127,7 @@ import { getExamTypes } from '../../api/examType'
 import type { ExamTypeItem } from '../../api/examType'
 import ListError from '../../components/ListError.vue'
 import { escapeHtml } from '../../utils/format'
+import { printHtml } from '../../utils/printHtml'
 import { useECharts } from '../../composables/useECharts'
 import {
   CHART_PALETTE,
@@ -593,8 +594,7 @@ const printFeedback = () => {
   const img = trendChart
     ? trendChart.getDataURL({ type: 'png', pixelRatio: 2, backgroundColor: '#fff' })
     : ''
-  const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${escapeHtml(t('gradeAnalysis.printDoc.title'))}</title>
-<style>
+  const css = `
   body{font-family:'PingFang SC','Microsoft YaHei',sans-serif;color:#222;padding:32px;max-width:760px;margin:0 auto;}
   h1{font-size:22px;border-bottom:2px solid #333;padding-bottom:12px;}
   .meta{color:#666;font-size:13px;margin:8px 0 16px;}
@@ -603,9 +603,8 @@ const printFeedback = () => {
   .section h2{font-size:16px;margin-bottom:8px;}
   .summary{line-height:1.7;}
   .comment{border:1px solid #ccc;border-radius:6px;padding:12px;min-height:60px;line-height:1.7;white-space:pre-wrap;}
-  .foot{margin-top:28px;color:#999;font-size:12px;}
-</style></head><body>
-<h1>${escapeHtml(t('gradeAnalysis.printDoc.title'))}</h1>
+  .foot{margin-top:28px;color:#999;font-size:12px;}`
+  const body = `<h1>${escapeHtml(t('gradeAnalysis.printDoc.title'))}</h1>
 <div class="meta">${escapeHtml(
     t('gradeAnalysis.printDoc.meta', {
       name,
@@ -615,14 +614,20 @@ const printFeedback = () => {
 ${img ? `<img class="img" src="${img}" />` : ''}
 <div class="section"><h2>${escapeHtml(t('gradeAnalysis.printDoc.summary'))}</h2><div class="summary">${escapeHtml(feedbackSummary.value || t('gradeAnalysis.printDoc.noData'))}</div></div>
 <div class="section"><h2>${escapeHtml(t('gradeAnalysis.printDoc.comments'))}</h2><div class="comment">${escapeHtml(feedbackComment.value || t('gradeAnalysis.printDoc.placeholder')).replace(/\n/g, '<br>')}</div></div>
-<div class="foot">${escapeHtml(t('gradeAnalysis.printDoc.footer'))}</div>
-</body></html>`
-  const win = window.open('', '_blank', 'width=820,height=900')
-  if (!win) return ElMessage.warning(t('gradeAnalysis.popupBlocked'))
-  win.document.write(html)
-  win.document.close()
-  win.focus()
-  setTimeout(() => win.print(), 400)
+<div class="foot">${escapeHtml(t('gradeAnalysis.printDoc.footer'))}</div>`
+  // 走 printHtml 而不是自己 window.open + setTimeout(400)：趋势图是 2 倍像素比的
+  // dataURL PNG，解码常常超过 400ms，固定延时的结果是打印件上那块图直接空白。
+  // 内容在上面已逐段 escapeHtml，不再过消毒器（它会把 data: 图片地址一并管起来，
+  // 万一被剥掉就更难发现）；这里也不需要公式渲染。
+  const printed = printHtml(t('gradeAnalysis.printDoc.title'), body, {
+    extraCss: css,
+    renderMath: false,
+    sanitize: false,
+    waitForImages: true,
+    width: 820,
+    height: 900
+  })
+  if (!printed) ElMessage.warning(t('gradeAnalysis.popupBlocked'))
 }
 
 onMounted(async () => {
