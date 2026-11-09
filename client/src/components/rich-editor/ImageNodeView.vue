@@ -246,14 +246,27 @@ const startResize = (dir: 1 | -1, e: PointerEvent) => {
     const next = startW + dir * (ev.clientX - startX)
     liveWidth.value = Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, Math.round(next)))
   }
-  const onUp = () => {
+  const detach = () => {
     window.removeEventListener('pointermove', onMove)
-    window.removeEventListener('pointerup', onUp)
+    window.removeEventListener('pointerup', onEnd)
+    window.removeEventListener('pointercancel', onCancel)
+  }
+  const onEnd = () => {
+    detach()
     dragging.value = false
     commitWidth(liveWidth.value)
   }
+  // 触屏被系统手势打断、拖到窗口外、切走页面都会发 pointercancel 而不是 pointerup。
+  // 只听 pointerup 的话这一路永远走不到：监听器留在 window 上、dragging 卡在 true，
+  // 图片宽度停在拖拽中间值，之后任意一次 pointerup 还会把这个过期宽度
+  // 写进可能已经被删掉的节点。取消时不提交，宽度自然回落到上一次的值。
+  const onCancel = () => {
+    detach()
+    dragging.value = false
+  }
   window.addEventListener('pointermove', onMove)
-  window.addEventListener('pointerup', onUp)
+  window.addEventListener('pointerup', onEnd)
+  window.addEventListener('pointercancel', onCancel)
 }
 
 const remove = () => props.deleteNode()
