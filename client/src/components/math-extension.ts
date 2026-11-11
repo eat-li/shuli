@@ -39,6 +39,9 @@ export const Mathematics = Extension.create({
                   joined += child.text || ''
                 } else if (child.type.name === 'hardBreak') {
                   breaks.push(pos + offset + 1)
+                  // \n 在拼接串里占一个位置，必须同样计入 pieces，
+                  // 否则换行后所有片段的 cursor 与 joined 错位，装饰区间整体右移
+                  pieces.push({ from: pos + offset + 1, text: '\n' })
                   joined += '\n'
                 }
               })
