@@ -19,7 +19,11 @@ const props = defineProps<{ html: string; stem?: boolean }>()
 //   4) 图片：换成 OSS 缩略图 + lazy/async（放在最后，避免子串被公式渲染打乱）
 const safeHtml = computed(() =>
   rewriteRichImages(
-    renderMathInHtml(wrapRichTables(sanitizeRichHtml(props.stem ? normalizeStemHtml(props.html || '') : props.html || '')))
+    renderMathInHtml(
+      wrapRichTables(
+        sanitizeRichHtml(props.stem ? normalizeStemHtml(props.html || '') : props.html || '')
+      )
+    )
   )
 )
 </script>

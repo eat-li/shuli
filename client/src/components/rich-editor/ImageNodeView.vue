@@ -18,64 +18,64 @@
            也不需要跟着滚动重算位置。mousedown.prevent 防止点按钮时丢掉图片选区。 -->
       <div v-if="selected" class="re-fig__bar" contenteditable="false" @mousedown.prevent>
         <template v-if="!inRow">
-        <el-tooltip
-          v-for="a in ALIGNS"
-          :key="a.value"
-          :content="t(a.label)"
-          placement="top"
-          :show-after="400"
-        >
+          <el-tooltip
+            v-for="a in ALIGNS"
+            :key="a.value"
+            :content="t(a.label)"
+            placement="top"
+            :show-after="400"
+          >
+            <button
+              type="button"
+              class="re-fig__btn re-fig__btn--icon"
+              :class="{ 'is-on': align === a.value }"
+              :aria-label="t(a.label)"
+              :aria-pressed="align === a.value"
+              @click="setAlign(a.value)"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+              >
+                <line
+                  v-for="(l, i) in a.lines"
+                  :key="i"
+                  :x1="l[0]"
+                  :x2="l[1]"
+                  :y1="l[2]"
+                  :y2="l[2]"
+                />
+              </svg>
+            </button>
+          </el-tooltip>
+
+          <span class="re-fig__sep" />
+
+          <button
+            v-for="p in PERCENTS"
+            :key="p"
+            type="button"
+            class="re-fig__btn"
+            :aria-label="t('editor.image.sizePercent', { n: p })"
+            @click="setPercent(p)"
+          >
+            {{ p }}%
+          </button>
           <button
             type="button"
-            class="re-fig__btn re-fig__btn--icon"
-            :class="{ 'is-on': align === a.value }"
-            :aria-label="t(a.label)"
-            :aria-pressed="align === a.value"
-            @click="setAlign(a.value)"
+            class="re-fig__btn"
+            :aria-label="t('editor.image.sizeOriginal')"
+            @click="setOriginal"
           >
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-            >
-              <line
-                v-for="(l, i) in a.lines"
-                :key="i"
-                :x1="l[0]"
-                :x2="l[1]"
-                :y1="l[2]"
-                :y2="l[2]"
-              />
-            </svg>
+            {{ t('editor.image.sizeOriginalShort') }}
           </button>
-        </el-tooltip>
 
-        <span class="re-fig__sep" />
-
-        <button
-          v-for="p in PERCENTS"
-          :key="p"
-          type="button"
-          class="re-fig__btn"
-          :aria-label="t('editor.image.sizePercent', { n: p })"
-          @click="setPercent(p)"
-        >
-          {{ p }}%
-        </button>
-        <button
-          type="button"
-          class="re-fig__btn"
-          :aria-label="t('editor.image.sizeOriginal')"
-          @click="setOriginal"
-        >
-          {{ t('editor.image.sizeOriginalShort') }}
-        </button>
-
-        <span class="re-fig__size">{{
-          shownWidth ? shownWidth + 'px' : t('editor.image.sizeAuto')
-        }}</span>
+          <span class="re-fig__size">{{
+            shownWidth ? shownWidth + 'px' : t('editor.image.sizeAuto')
+          }}</span>
         </template>
         <span v-else class="re-fig__size">{{ t('editor.image.sizeAuto') }}</span>
 

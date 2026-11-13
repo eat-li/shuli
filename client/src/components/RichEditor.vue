@@ -275,7 +275,9 @@ const applyAiResult = () => {
   aiApplying.value = true
   try {
     editor.value?.commands.setContent(
-      sanitizeRichHtml(props.aiField === 'stem' ? normalizeStemHtml(aiDialog.rawHtml) : aiDialog.rawHtml),
+      sanitizeRichHtml(
+        props.aiField === 'stem' ? normalizeStemHtml(aiDialog.rawHtml) : aiDialog.rawHtml
+      ),
       false
     )
     // ⚠️ setContent 默认 emitUpdate=false，不会触发 onUpdate → v-model 不更新，

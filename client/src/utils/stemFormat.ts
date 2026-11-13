@@ -134,9 +134,11 @@ export function normalizeStemHtml(html: string): string {
     }
   }
 
-  // 空壳段落清掉（含 img 的保留；<p><br></p> 是编辑器空壳，一并清）
+  // 空壳段落清掉（<p><br></p> 是编辑器空壳，一并清）；
+  // 顶层裸 <img> 是块级图片节点，自身即内容，绝不能当空壳删
   for (const b of blocks()) {
-    if (!(b.textContent || '').trim() && !b.querySelector('img')) b.remove()
+    const hasImg = b.tagName === 'IMG' || !!b.querySelector('img')
+    if (!(b.textContent || '').trim() && !hasImg) b.remove()
   }
 
   return template.innerHTML
