@@ -234,7 +234,7 @@ const onContentClick = (e: MouseEvent) => {
   display: grid;
   grid-template-columns: 58px minmax(0, 1fr);
   overflow: hidden;
-  background-color: var(--card-bg);
+  background-color: var(--qcard-bg);
   border: 1px solid var(--card-edge);
   border-radius: var(--card-radius-sm);
   box-shadow: var(--card-shadow);
@@ -252,22 +252,17 @@ const onContentClick = (e: MouseEvent) => {
   box-shadow: var(--card-shadow-hover);
 }
 .qcard:active {
-  background-color: var(--surface-muted);
+  background-color: var(--qcard-bg-active);
 }
-/* —— 二级材质：贴在卡片面板之上的「瓦片」 ——
-   题目浏览页把 .qcard 直接铺在纸底上，那时它是白面；
-   知识点页把它们放进 <el-card> 面板里，白卡压白面板就读不出层级了
-   （两者同为 #FFFFFF）。所以由调用方用 onGlass 声明层级，
-   这里换成比面板**深一档**的瓦片色 —— 这是同一套语言的第二个材质重量，
-   形状/投影/时长/缓动全部沿用上面那套。
-   注意方向：瓦片比面板深。上一版面板是半透明玻璃，瓦片反而要更浅；
-   换成实心白面板后，层级只能靠「更深」来表达。 */
+/* —— 瓦片变体：知识点页里卡片坐在白面板中 ——
+   底色与浏览页统一（--qcard-bg），层级靠面板白边表达；
+   悬停加深一档给反馈。 */
 .qcard--tile {
-  background-color: var(--card-tile-bg);
+  background-color: var(--qcard-bg);
   border-color: var(--card-tile-edge);
 }
 .qcard--tile:hover {
-  background-color: var(--card-tile-bg-hover);
+  background-color: var(--qcard-bg-active);
   border-color: var(--card-tile-edge);
 }
 
@@ -295,8 +290,8 @@ const onContentClick = (e: MouseEvent) => {
   align-items: center;
   gap: 2px;
   padding: 17px 8px;
-  background: var(--surface-muted);
-  border-right: 1px solid var(--hair);
+  background: transparent;
+  border-right: 1px solid var(--card-edge);
   color: var(--ink-soft);
 }
 .qcard__main {

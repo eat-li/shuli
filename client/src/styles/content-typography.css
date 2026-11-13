@@ -54,6 +54,10 @@
   margin: 6px auto;
   max-height: var(--content-figure-max-h);
   object-fit: contain;
+  /* 白底题图融入浏览卡底色（#eef0f3）：比底色亮的像素取底色，
+     卡上不再浮出白块；白面（结论/弹窗）上 darken 等价无操作。
+     打印/导出样式不加这条——深色导出底会把图吃掉。 */
+  mix-blend-mode: darken;
 }
 /* 没写宽度的老图在宽卡里别铺满整行；有显式宽度就按宽度显示 */
 .rich-content img:not([width]) {
