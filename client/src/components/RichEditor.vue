@@ -81,11 +81,13 @@ import {
 import { normalizeAiMathHtml, validateAiMath } from '../utils/aiMath'
 import { matchImageUrl } from '../utils/imageUrl'
 import { latexToHtml, looksLikeLatex } from '../utils/latexPaste'
+import { normalizeStemHtml } from '../utils/stemFormat'
 import RichEditorToolbar from './rich-editor/RichEditorToolbar.vue'
 import RichImagePreview from './rich-editor/RichImagePreview.vue'
 import RichAiPreviewDialog from './rich-editor/RichAiPreviewDialog.vue'
 import RichSourcePanel from './rich-editor/RichSourcePanel.vue'
 import ImageNodeView from './rich-editor/ImageNodeView.vue'
+import { ImageRow } from './rich-editor/imageRow'
 
 // 图表对话框内含 echarts 与 html-to-image（合计约 600KB），只有点「插入图表」才用得到。
 // 静态 import 会让所有使用编辑器的页面（题目、结论、讲义）首屏就下载它们。
@@ -272,7 +274,10 @@ const retryAiFormat = () => {
 const applyAiResult = () => {
   aiApplying.value = true
   try {
-    editor.value?.commands.setContent(sanitizeRichHtml(aiDialog.rawHtml), false)
+    editor.value?.commands.setContent(
+      sanitizeRichHtml(props.aiField === 'stem' ? normalizeStemHtml(aiDialog.rawHtml) : aiDialog.rawHtml),
+      false
+    )
     // ⚠️ setContent 默认 emitUpdate=false，不会触发 onUpdate → v-model 不更新，
     // 保存时会提交排版前的内容。必须手动把新内容同步给父组件（form.title）。
     emit('update:modelValue', editor.value?.getHTML() || '')
@@ -334,6 +339,7 @@ const editor = useEditor({
   extensions: [
     StarterKit,
     ResizableImage,
+    ImageRow,
     Mathematics,
     Table.configure({ resizable: true }),
     TableRow,

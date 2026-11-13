@@ -50,7 +50,7 @@
             }}</span>
           </div>
           <div class="org__mine-title">
-            <RichContent :html="current?.title || ''" />
+            <RichContent stem :html="current?.title || ''" />
           </div>
         </div>
 
@@ -150,7 +150,7 @@
                 <span v-else class="peer__sub peer__sub--none">{{ t('page.uncategorized') }}</span>
               </div>
               <div class="peer__title">
-                <RichContent :html="q.title || ''" />
+                <RichContent stem :html="q.title || ''" />
               </div>
             </div>
           </div>

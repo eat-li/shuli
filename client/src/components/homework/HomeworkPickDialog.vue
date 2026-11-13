@@ -98,7 +98,7 @@
       <el-table-column :label="t('homeworkPick.questionColumn')" min-width="360">
         <template #default="{ row }">
           <div class="q-cell" :class="{ 'is-compact': !pickerFull }" @click="onQuestionCellClick">
-            <RichContent class="q-cell-preview" :html="row.title || ''" />
+            <RichContent stem class="q-cell-preview" :html="row.title || ''" />
             <template v-if="pickerFull">
               <div v-if="optionTexts(row).length" class="q-cell-options">
                 <div v-for="(opt, oi) in optionTexts(row)" :key="oi" class="q-cell-option">
@@ -150,7 +150,7 @@
   <!-- 题目详情 -->
   <el-dialog v-model="qDetailVisible" :title="t('homeworkPick.detailTitle')" width="640px">
     <template v-if="currentQuestion">
-      <div class="q-title"><RichContent :html="currentQuestion.title" /></div>
+      <div class="q-title"><RichContent stem :html="currentQuestion.title" /></div>
       <el-descriptions :column="3" border class="q-meta">
         <el-descriptions-item :label="t('homeworkPick.typeColumn')">{{
           typeLabel(currentQuestion.type)

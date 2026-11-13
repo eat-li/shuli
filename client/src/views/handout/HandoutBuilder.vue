@@ -106,7 +106,7 @@
                   class="pool-row"
                   @click="insertQuestion(row)"
                 >
-                  <RichContent class="pool-row__title" :html="row.title || ''" />
+                  <RichContent stem class="pool-row__title" :html="row.title || ''" />
                   <div class="pool-row__meta">
                     <span>{{ typeLabel(row.type) }}</span>
                     <span class="stars">{{ '★'.repeat(row.difficulty || 0) || '—' }}</span>
@@ -299,6 +299,7 @@ import ListError from '../../components/ListError.vue'
 import { printHtml, escapeHtml, PAPER_FONT } from '../../utils/printHtml'
 import { renderMathInHtml } from '../../utils/mathRender'
 import { sanitizeHtml } from '../../utils/sanitizeHtml'
+import { normalizeStemHtml } from '../../utils/stemFormat'
 import { useLocalDraft } from '../../composables/useLocalDraft'
 import type { Question, Conclusion, KnowledgeCategory } from '../../types'
 
@@ -413,7 +414,7 @@ const buildQuestionHtml = (q: Question, no: number, withAnswer: boolean, withMet
             : ''
         }】</span> `
       : ''
-  parts.push(`<p><strong>${no}.</strong> ${meta}${String(q.title ?? '')}</p>`)
+  parts.push(`<p><strong>${no}.</strong> ${meta}${normalizeStemHtml(String(q.title ?? ''))}</p>`)
   const opts = Array.isArray(q.options) ? q.options : []
   if (opts.length) {
     const lines = opts

@@ -44,7 +44,7 @@
 
       <!-- 题干完整展示，不做行数截断：看题的地方就应该能看全 -->
       <div class="qcard__title" @click="onContentClick">
-        <RichContent :html="question.title || ''" />
+        <RichContent stem :html="question.title || ''" />
       </div>
 
       <div v-if="question.body" class="qcard__body" @click="onContentClick">

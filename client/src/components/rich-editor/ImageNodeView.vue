@@ -17,6 +17,7 @@
       <!-- 工具条压在图片右上角：不参与文档流、不会被 .re-content 的滚动容器裁掉，
            也不需要跟着滚动重算位置。mousedown.prevent 防止点按钮时丢掉图片选区。 -->
       <div v-if="selected" class="re-fig__bar" contenteditable="false" @mousedown.prevent>
+        <template v-if="!inRow">
         <el-tooltip
           v-for="a in ALIGNS"
           :key="a.value"
@@ -75,8 +76,38 @@
         <span class="re-fig__size">{{
           shownWidth ? shownWidth + 'px' : t('editor.image.sizeAuto')
         }}</span>
+        </template>
+        <span v-else class="re-fig__size">{{ t('editor.image.sizeAuto') }}</span>
 
         <span class="re-fig__sep" />
+
+        <el-tooltip
+          v-if="canGroup || inRow"
+          :content="inRow ? t('editor.image.rowUngroup') : t('editor.image.rowGroup')"
+          placement="top"
+          :show-after="400"
+        >
+          <button
+            type="button"
+            class="re-fig__btn re-fig__btn--icon"
+            :class="{ 'is-on': inRow }"
+            :aria-label="inRow ? t('editor.image.rowUngroup') : t('editor.image.rowGroup')"
+            :aria-pressed="inRow"
+            @click="toggleRow"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <rect x="3" y="5" width="8" height="14" rx="1" />
+              <rect x="13" y="5" width="8" height="14" rx="1" />
+            </svg>
+          </button>
+        </el-tooltip>
 
         <el-tooltip :content="t('editor.image.viewLarge')" placement="top" :show-after="400">
           <button
@@ -125,14 +156,14 @@
 
       <!-- 左右把手：只改宽度（高度始终按比例），拖动中只改样式，松手才写节点 -->
       <span
-        v-if="selected"
+        v-if="selected && !inRow"
         class="re-fig__grip re-fig__grip--w"
         role="separator"
         :aria-label="t('editor.image.resizeHint')"
         @pointerdown="startResize(-1, $event)"
       />
       <span
-        v-if="selected"
+        v-if="selected && !inRow"
         class="re-fig__grip re-fig__grip--e"
         role="separator"
         :aria-label="t('editor.image.resizeHint')"
@@ -143,7 +174,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { NodeViewWrapper, nodeViewProps } from '@tiptap/vue-3'
 
@@ -190,6 +221,36 @@ const frameEl = ref<HTMLElement>()
 
 const align = computed(() => (props.node.attrs.align as string) || 'center')
 
+// 相邻图片增删、成行/拆行都不一定替换当前节点对象，props 不会刷新；
+// 订阅 transaction 作为响应式触发源，保证按钮状态跟着文档走。
+const tick = ref(0)
+const bump = () => tick.value++
+onMounted(() => props.editor.on('transaction', bump))
+onBeforeUnmount(() => props.editor.off('transaction', bump))
+
+const inRow = computed(() => {
+  void tick.value
+  const pos = props.getPos()
+  if (typeof pos !== 'number') return false
+  return props.editor.state.doc.resolve(pos).parent.type.name === 'imageRow'
+})
+
+const canGroup = computed(() => {
+  void tick.value
+  if (inRow.value) return false
+  const pos = props.getPos()
+  if (typeof pos !== 'number') return false
+  const $pos = props.editor.state.doc.resolve(pos)
+  const parent = $pos.parent
+  const i = $pos.index()
+  return (
+    (i > 0 && parent.child(i - 1).type.name === 'image') ||
+    (i < parent.childCount - 1 && parent.child(i + 1).type.name === 'image')
+  )
+})
+
+const toggleRow = () => props.editor.commands.toggleImageRow()
+
 const widthPx = computed(() => {
   const w = Number.parseInt(String(props.node.attrs.width ?? ''), 10)
   return Number.isFinite(w) && w > 0 ? w : 0
@@ -201,6 +262,8 @@ const dragging = ref(false)
 const liveWidth = ref(0)
 const shownWidth = computed(() => (dragging.value ? liveWidth.value : widthPx.value))
 const frameStyle = computed(() => {
+  // 行内宽度由等分列决定，手动宽度不生效，避免撑破并排布局
+  if (inRow.value) return {}
   const w = shownWidth.value
   return w ? { width: `${w}px` } : {}
 })

@@ -3,6 +3,7 @@
 // 同一份排版逻辑很快就会在各处走样。
 import { PAPER_FONT, escapeHtml } from './printHtml'
 import { questionOptionTexts, questionTypeLabel as typeLabel } from './format'
+import { normalizeStemHtml } from './stemFormat'
 
 export interface QuestionPaperOptions {
   /** 试卷大标题 */
@@ -126,7 +127,7 @@ export const buildQuestionFragmentHtml = (
           <span style="color:${inkMuted};font-size:${fs - 2}px;margin-left:6px;">【${escapeHtml(typeLabel(q.type))}】</span>
           ${q.difficulty ? `<span style="color:${inkMuted};font-size:${fs - 2}px;margin-left:6px;">难度 ${q.difficulty} 星</span>` : ''}
         </div>
-        <div>${q.title || ''}</div>
+        <div>${normalizeStemHtml(q.title || '')}</div>
         ${renderOptions(q)}
         ${q.body ? `<div style="margin-top:4px;">${q.body}</div>` : ''}
         ${answerAreaHeight > 0 ? `<div style="height:${answerAreaHeight}px;"></div>` : ''}

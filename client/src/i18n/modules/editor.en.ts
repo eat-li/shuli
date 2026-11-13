@@ -60,7 +60,9 @@ export default {
       sizeAuto: 'Auto',
       viewLarge: 'View large',
       remove: 'Remove image',
-      resizeHint: 'Drag to resize the image'
+      resizeHint: 'Drag to resize the image',
+      rowGroup: 'Side by side with adjacent images',
+      rowUngroup: 'Exit side-by-side'
     },
     imagePreview: {
       zoomOut: 'Zoom out',

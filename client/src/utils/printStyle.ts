@@ -24,5 +24,10 @@ export const PRINT_FIGURE_CSS =
   // 对齐由编辑器写进 class（内联 style 会被消毒器剥掉）
   `img.re-img--left{margin-left:0;margin-right:auto}` +
   `img.re-img--right{margin-left:auto;margin-right:0}` +
+  // 并排图行在纸上保持并排：等宽成列，mm 上限只约束单图高度
+  `.re-img-row{display:flex;gap:4mm;align-items:flex-start;margin:6px 0}` +
+  `.re-img-row img{flex:1 1 0;min-width:0;width:100%;max-width:100%;margin:0}` +
+  // 来源行轻注：纸上同样小一号、灰一度
+  `.re-source{margin:0 0 4px;color:#666;font-size:0.85em}` +
   // 表格里的图跟随单元格宽度，mm 上限会把它顶出格子
   `table img{max-width:100%;max-height:none;display:inline;margin:0}`

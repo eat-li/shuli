@@ -74,6 +74,57 @@
   max-height: none;
 }
 
+/* —— 并排图行：编辑态与浏览态同一套度量 ——
+   编辑态结构是 .re-img-row > .re-img-row__content > .re-fig（节点视图），
+   浏览态消毒后是 .re-img-row > img。等宽成列、高度各自按比例。 */
+.re-content .re-img-row {
+  margin: 8px 0;
+}
+.re-content .re-img-row__content,
+.rich-content .re-img-row {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+.rich-content .re-img-row {
+  margin: 6px 0;
+}
+.re-content .re-img-row .re-fig {
+  flex: 1 1 0;
+  min-width: 0;
+  margin: 0;
+}
+.re-content .re-img-row .re-fig__frame {
+  width: 100%;
+}
+.rich-content .re-img-row img {
+  flex: 1 1 0;
+  min-width: 0;
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
+}
+/* 窄屏并排会挤成两条细缝，回落竖排 */
+@media (max-width: 640px) {
+  .re-content .re-img-row__content,
+  .rich-content .re-img-row {
+    flex-direction: column;
+  }
+  .re-content .re-img-row .re-fig,
+  .rich-content .re-img-row img {
+    flex: none;
+    width: 100%;
+  }
+}
+
+/* —— 来源行：标准化轻注（年份·考试名），编辑 / 浏览同一度量 —— */
+.rich-content .re-source,
+.re-content .ProseMirror .re-source {
+  margin: 0 0 4px;
+  color: var(--ink-soft);
+  font-size: calc(var(--content-font-size) * 0.85);
+}
+
 /* 打印 / 导出 PDF 时不受视口高度限制，否则题图会被裁掉 */
 @media print {
   .rich-content img {

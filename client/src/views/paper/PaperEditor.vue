@@ -86,7 +86,7 @@
             <div v-for="it in sec.items" :key="it.questionId" class="row">
               <span class="row__no">{{ it.no }}</span>
               <div class="row__body">
-                <RichContent class="row__title" :html="it.question.title" />
+                <RichContent stem class="row__title" :html="it.question.title" />
                 <div class="row__meta">
                   <span v-if="it.question.difficulty">{{
                     '★'.repeat(it.question.difficulty)

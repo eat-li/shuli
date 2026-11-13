@@ -145,6 +145,7 @@
             >
             <div class="sel-main" @click="onQuestionCellClick">
               <RichContent
+                stem
                 class="sel-title"
                 :class="{ 'is-full': isSelectedFull(item.q.id) }"
                 :html="item.q.title || ''"

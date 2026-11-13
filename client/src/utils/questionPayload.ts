@@ -10,6 +10,8 @@
 // 只用于「整表单提交」（新增 / 编辑题目）。局部更新（PATCH 单个字段）不要用它，
 // 否则会把没传的字段一起置空。
 
+import { normalizeStemHtml } from './stemFormat'
+
 /** 去掉标签与不可见字符，得到用于判空的纯文本（不用于展示） */
 export const richTextPlain = (html?: string | null): string =>
   String(html ?? '')
@@ -36,6 +38,8 @@ export function normalizeQuestionPayload<T extends Record<string, any>>(form: T)
   const knowledgeTag = trimOrNull(form.knowledgeTag)
   return {
     ...form,
+    // 题干格式归一（去手写题号 / 来源行标准化 / 整段粗体压平），落库即统一格式
+    title: typeof form.title === 'string' ? normalizeStemHtml(form.title) : form.title,
     knowledgeTag,
     knowledgeSubTag: knowledgeTag ? trimOrNull(form.knowledgeSubTag) : null,
     body: isBlankRichText(form.body) ? null : form.body,

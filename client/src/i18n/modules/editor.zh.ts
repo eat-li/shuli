@@ -59,7 +59,9 @@ export default {
       sizeAuto: '自动',
       viewLarge: '查看大图',
       remove: '删除图片',
-      resizeHint: '拖动调整图片宽度'
+      resizeHint: '拖动调整图片宽度',
+      rowGroup: '与相邻图片并排',
+      rowUngroup: '取消并排'
     },
     imagePreview: {
       zoomOut: '缩小',

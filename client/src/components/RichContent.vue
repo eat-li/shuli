@@ -7,16 +7,20 @@ import { computed } from 'vue'
 import { sanitizeRichHtml, wrapRichTables } from '../utils/sanitizeHtml'
 import { renderMathInHtml } from '../utils/mathRender'
 import { rewriteRichImages } from '../utils/richImages'
+import { normalizeStemHtml } from '../utils/stemFormat'
 
-const props = defineProps<{ html: string }>()
+const props = defineProps<{ html: string; stem?: boolean }>()
 
 // 四步走的字符串级管道，一次 v-html 落地：
+//   0) 题干开关：老数据格式混杂（手写题号 / 加粗来源行 / 整段粗体），渲染前归一
 //   1) 消毒：剥掉 style / script，只留结构标签
 //   2) 表格：给裸 <table> 套横向滚动容器（否则宽表格撑破整页）
 //   3) 公式：$...$ / $$...$$ 跨 <br> 也能正确匹配
 //   4) 图片：换成 OSS 缩略图 + lazy/async（放在最后，避免子串被公式渲染打乱）
 const safeHtml = computed(() =>
-  rewriteRichImages(renderMathInHtml(wrapRichTables(sanitizeRichHtml(props.html || ''))))
+  rewriteRichImages(
+    renderMathInHtml(wrapRichTables(sanitizeRichHtml(props.stem ? normalizeStemHtml(props.html || '') : props.html || '')))
+  )
 )
 </script>
 

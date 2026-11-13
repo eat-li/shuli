@@ -124,6 +124,7 @@ import { ElMessage } from 'element-plus'
 import { printHtml, buildPrintDocument, PAPER_FONT } from '../utils/printHtml'
 import { renderMathInHtml } from '../utils/mathRender'
 import { sanitizeHtml, sanitizeRichHtml } from '../utils/sanitizeHtml'
+import { normalizeStemHtml } from '../utils/stemFormat'
 import { publishHomeworkPdf } from '../api/homework'
 import type { Homework, Question } from '../types'
 
@@ -267,7 +268,7 @@ const buildHomeworkHtml = (overrides: Partial<ExportLayout> = {}) => {
           ${L.showKnowledge && q.knowledgeTag ? `<span style="color:${inkMuted};font-size:${fs - 2}px;margin-left:6px;">${escapeHtml(q.knowledgeTag)}${q.knowledgeSubTag ? ' › ' + escapeHtml(q.knowledgeSubTag) : ''}</span>` : ''}
           ${L.showScore ? `<span style="float:right;color:${inkMuted};">${escapeHtml(t('homeworkDialogs.export.scoreTag', { n: L.scorePerQuestion }))}</span>` : ''}
         </div>
-        <div>${safeQuestionHtml(q.title)}</div>
+        <div>${safeQuestionHtml(normalizeStemHtml(String(q.title ?? '')))}</div>
         ${opts}
         ${q.body ? `<div style="margin-top:4px;">${safeQuestionHtml(q.body)}</div>` : ''}
         ${L.showAnswerArea && !L.onePerPage ? `<div style="height:${L.answerAreaHeight}px;"></div>` : ''}
